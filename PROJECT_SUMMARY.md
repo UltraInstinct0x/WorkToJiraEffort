@@ -12,24 +12,25 @@ A cross-platform Rust application that automatically tracks work time via Screen
 WorkToJiraEffort/
 ├── .github/
 │   └── workflows/
-│       ├── ci.yml              # CI workflow (test, build, lint on all platforms)
-│       └── release.yml         # Release workflow (build artifacts for all platforms)
+│       ├── ci.yml                  # CI workflow (test, build, lint on all platforms)
+│       └── release.yml             # Release workflow (build artifacts for all platforms)
 ├── src/
-│   ├── main.rs                 # CLI entry point and command handling
-│   ├── config.rs               # Configuration management (TOML)
-│   ├── screenpipe.rs           # Screenpipe API client
-│   ├── jira.rs                 # Jira REST API v3 integration
-│   ├── salesforce.rs           # Salesforce REST API integration
-│   └── tracker.rs              # Core tracking logic
-├── Cargo.toml                  # Rust dependencies and metadata
-├── README.md                   # Complete documentation
-├── QUICKSTART.md               # Quick start guide
-├── CONTRIBUTING.md             # Contribution guidelines
-├── TROUBLESHOOTING.md          # Troubleshooting guide
-├── LICENSE                     # MIT License
-├── config.example.toml         # Example configuration
-├── install.sh                  # Installation script
-└── work-to-jira-effort.service # Systemd service example
+│   ├── main.rs                     # CLI entry point and command handling
+│   ├── config.rs                   # Configuration management (TOML)
+│   ├── screenpipe.rs               # Screenpipe API client
+│   ├── screenpipe_manager.rs       # Screenpipe subprocess lifecycle management
+│   ├── jira.rs                     # Jira REST API v3 integration
+│   ├── salesforce.rs               # Salesforce REST API integration
+│   └── tracker.rs                  # Core tracking logic
+├── Cargo.toml                      # Rust dependencies and metadata
+├── README.md                       # Complete documentation
+├── QUICKSTART.md                   # Quick start guide
+├── CONTRIBUTING.md                 # Contribution guidelines
+├── TROUBLESHOOTING.md              # Troubleshooting guide
+├── LICENSE                         # MIT License
+├── config.example.toml             # Example configuration
+├── install.sh                      # Installation script
+└── work-to-jira-effort.service     # Systemd service example
 ```
 
 ---
@@ -48,10 +49,13 @@ WorkToJiraEffort/
 - Zero-cost abstractions
 
 ### ✅ Screenpipe Integration
+- **Embedded Management**: Screenpipe is automatically installed and managed as a subprocess
+- **No Manual Setup**: Users don't need to install Screenpipe separately
+- **Automatic Lifecycle**: Starts when app starts, stops when app stops
 - HTTP client for Screenpipe REST API
 - Activity retrieval and parsing
-- Health check support
-- Configurable endpoints
+- Health check support and verification
+- Cross-platform binary discovery and installation
 
 ### ✅ Jira Integration
 - REST API v3 support
@@ -99,35 +103,50 @@ WorkToJiraEffort/
 ## 📊 Architecture
 
 ```
-┌─────────────┐
-│   User's    │
-│  Computer   │
-└──────┬──────┘
-       │
-       ▼
-┌─────────────┐      HTTP      ┌──────────────┐
-│ Screenpipe  │◄────────────────┤ WorkToJira   │
-│   Server    │                 │    Effort    │
-└─────────────┘                 └──────┬───────┘
-                                       │
-                                       │ HTTP/REST
-                        ┌──────────────┼──────────────┐
-                        │              │              │
-                        ▼              ▼              ▼
-                 ┌──────────┐   ┌──────────┐   ┌──────────┐
-                 │   Jira   │   │Salesforce│   │   Logs   │
-                 │   API    │   │   API    │   │  stdout  │
-                 └──────────┘   └──────────┘   └──────────┘
+┌─────────────────────────────────────────────────────────┐
+│             WorkToJiraEffort Application                │
+│  ┌─────────────────────────────────────────────────┐   │
+│  │         ScreenpipeManager (subprocess)          │   │
+│  │  ┌─────────────┐                                │   │
+│  │  │ Screenpipe  │ ◄─── Manages Lifecycle         │   │
+│  │  │   Server    │      (start/stop/health)       │   │
+│  │  └──────┬──────┘                                │   │
+│  └─────────┼───────────────────────────────────────┘   │
+│            │                                            │
+│            │ HTTP                                       │
+│            ▼                                            │
+│  ┌─────────────────────────────────────────────────┐   │
+│  │         Screenpipe API Client                   │   │
+│  │  (Activity retrieval, health checks)            │   │
+│  └─────────┬───────────────────────────────────────┘   │
+│            │                                            │
+│            ▼                                            │
+│  ┌─────────────────────────────────────────────────┐   │
+│  │         Work Tracker                            │   │
+│  │  (Activity consolidation, issue detection)      │   │
+│  └─────────┬───────────────────────────────────────┘   │
+└────────────┼──────────────────────────────────────────┘
+             │
+             │ HTTP/REST
+  ┌──────────┼──────────────┐
+  │          │              │
+  ▼          ▼              ▼
+┌──────┐   ┌──────┐   ┌──────────┐
+│ Jira │   │ SF   │   │   Logs   │
+│ API  │   │ API  │   │  stdout  │
+└──────┘   └──────┘   └──────────┘
 ```
 
 **Data Flow:**
-1. User works on computer
-2. Screenpipe captures screen/window data
-3. WorkToJiraEffort polls Screenpipe API
-4. Activities are consolidated and filtered
-5. Jira issue keys extracted via regex
-6. Time logged to Jira and/or Salesforce
-7. Progress logged to stdout
+1. App starts and ScreenpipeManager launches Screenpipe as subprocess
+2. User works on computer
+3. Screenpipe captures screen/window data
+4. WorkToJiraEffort polls Screenpipe API
+5. Activities are consolidated and filtered
+6. Jira issue keys extracted via regex
+7. Time logged to Jira and/or Salesforce
+8. Progress logged to stdout
+9. On app exit, ScreenpipeManager gracefully stops Screenpipe
 
 ---
 
@@ -140,9 +159,12 @@ WorkToJiraEffort/
 - **clap** - CLI argument parsing
 - **chrono** - Date/time handling
 - **anyhow/thiserror** - Error handling
-- **env_logger/log** - Logging
+- **env_logger/log/tracing** - Logging
 - **config** - Configuration management
 - **regex** - Pattern matching
+- **which** - Binary location discovery
+- **dirs** - Cross-platform directory paths
+- **nix** - Unix signal handling
 
 ### Code Quality
 - ✅ Compiles without errors
