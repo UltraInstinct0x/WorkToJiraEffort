@@ -1,2 +1,259 @@
 # WorkToJiraEffort
-Automatically track your work via Screenpipe and log on Jira &amp; Salesforce
+
+Automatically track your work time via Screenpipe and log effort to Jira & Salesforce.
+
+## Overview
+
+WorkToJiraEffort is a cross-platform (Linux, Windows, macOS) application written in Rust that:
+- Monitors your work activities using [Screenpipe](https://github.com/mediar-ai/screenpipe)
+- Automatically detects Jira issue keys from your active applications
+- Logs work time to Jira issues
+- Optionally logs time entries to Salesforce
+- Runs continuously in the background with configurable polling intervals
+
+## Features
+
+- 🔄 **Automatic Time Tracking**: Monitors your active windows and applications via Screenpipe
+- 🎯 **Smart Jira Detection**: Automatically finds Jira issue keys (e.g., PROJ-123) in window titles
+- 📊 **Dual Platform Support**: Logs time to both Jira and Salesforce
+- ⚙️ **Configurable**: Customizable polling intervals and minimum activity duration
+- 🔒 **Secure**: API credentials stored in local configuration file
+- 🖥️ **Cross-Platform**: Works on Linux, Windows, and macOS
+
+## Prerequisites
+
+1. **Screenpipe**: You need to have Screenpipe running locally
+   - Install from: https://github.com/mediar-ai/screenpipe
+   - Default URL: `http://localhost:3030`
+
+2. **Jira Account** (optional but recommended):
+   - Jira instance URL
+   - Email address
+   - API token (generate at: https://id.atlassian.com/manage-profile/security/api-tokens)
+
+3. **Salesforce Account** (optional):
+   - Instance URL
+   - Username and password
+   - Security token
+   - Connected app credentials (client ID and secret)
+
+## Installation
+
+### From Source
+
+```bash
+# Clone the repository
+git clone https://github.com/UltraInstinct0x/WorkToJiraEffort.git
+cd WorkToJiraEffort
+
+# Build the project
+cargo build --release
+
+# The binary will be at target/release/work-to-jira-effort
+```
+
+### Using Cargo
+
+```bash
+cargo install --path .
+```
+
+## Configuration
+
+### 1. Initialize Configuration
+
+```bash
+work-to-jira-effort init
+```
+
+This creates a configuration file at:
+- **Linux/macOS**: `~/.config/worktojiraeffort/config.toml`
+- **Windows**: `%APPDATA%\worktojiraeffort\config.toml`
+
+### 2. Edit Configuration
+
+Open the config file and update with your credentials:
+
+```toml
+[screenpipe]
+url = "http://localhost:3030"  # Your Screenpipe instance URL
+
+[jira]
+url = "https://your-domain.atlassian.net"
+email = "your-email@example.com"
+api_token = "your-api-token"
+enabled = true
+
+[salesforce]
+instance_url = "https://your-instance.salesforce.com"
+username = "your-username"
+password = "your-password"
+security_token = "your-security-token"
+client_id = "your-client-id"
+client_secret = "your-client-secret"
+enabled = false  # Set to true to enable Salesforce integration
+
+[tracking]
+poll_interval_secs = 300      # Check for new activities every 5 minutes
+min_activity_duration_secs = 60  # Only log activities longer than 1 minute
+```
+
+## Usage
+
+### Check Configuration and Connectivity
+
+```bash
+work-to-jira-effort check
+```
+
+This verifies:
+- Configuration file is valid
+- Screenpipe is accessible
+- Jira API credentials are correct
+- Salesforce API credentials are correct (if enabled)
+
+### Start Tracking
+
+```bash
+work-to-jira-effort start
+```
+
+The application will:
+1. Connect to Screenpipe
+2. Poll for recent activities at the configured interval
+3. Consolidate activities by application/window
+4. Extract Jira issue keys from window titles
+5. Log time to matching Jira issues
+6. Log time to Salesforce (if enabled)
+
+Press `Ctrl+C` to stop tracking.
+
+### Enable Logging
+
+For detailed logging output:
+
+```bash
+RUST_LOG=info work-to-jira-effort start
+```
+
+Available log levels: `error`, `warn`, `info`, `debug`, `trace`
+
+## How It Works
+
+### Activity Detection
+
+WorkToJiraEffort queries the Screenpipe API to retrieve recent activities including:
+- Window titles
+- Application names
+- Text content from OCR (if available)
+- Timestamps
+
+### Jira Integration
+
+The application automatically detects Jira issue keys using the pattern `[A-Z]+-\d+` (e.g., `PROJ-123`, `DEV-456`).
+
+When a match is found in the window title or application name, it:
+1. Consolidates activity duration
+2. Creates a worklog entry in Jira
+3. Includes context about the tracked application
+
+### Salesforce Integration
+
+If enabled, time entries are created in Salesforce using the `TimeEntry__c` custom object. 
+
+**Note**: You may need to customize the Salesforce object name and fields based on your organization's setup. Edit `src/salesforce.rs` to match your schema.
+
+## Architecture
+
+The application is structured into several modules:
+
+- **config**: Configuration management and persistence
+- **screenpipe**: Screenpipe API client for activity retrieval
+- **jira**: Jira API client for worklog creation
+- **salesforce**: Salesforce API client for time entry creation
+- **tracker**: Core tracking logic and activity consolidation
+- **main**: CLI interface and command handling
+
+## Security Considerations
+
+- API credentials are stored in plain text in the config file
+- Ensure the config file has appropriate permissions (readable only by you)
+- Consider using environment variables for credentials in production
+- The application does not transmit data to any third parties except Jira and Salesforce
+
+## Troubleshooting
+
+### Screenpipe Not Responding
+
+Ensure Screenpipe is running:
+```bash
+# Check if Screenpipe is accessible
+curl http://localhost:3030/health
+```
+
+### Jira Authentication Failed
+
+- Verify your API token is correct
+- Ensure your email matches your Jira account
+- Check that your Jira instance URL is correct (include https://)
+
+### No Activities Being Tracked
+
+- Verify Screenpipe is recording activities
+- Check the `poll_interval_secs` is reasonable (default: 300 seconds)
+- Ensure `min_activity_duration_secs` is not too high
+
+### Jira Issues Not Detected
+
+- Ensure issue keys appear in window titles (e.g., "PROJ-123: Feature Implementation")
+- Check the regex pattern in `src/jira.rs` if you use a different format
+
+## Development
+
+### Building
+
+```bash
+cargo build
+```
+
+### Running Tests
+
+```bash
+cargo test
+```
+
+### Code Formatting
+
+```bash
+cargo fmt
+```
+
+### Linting
+
+```bash
+cargo clippy
+```
+
+## Contributing
+
+Contributions are welcome! Please:
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Submit a pull request
+
+## License
+
+MIT License - see LICENSE file for details
+
+## Acknowledgments
+
+- [Screenpipe](https://github.com/mediar-ai/screenpipe) - Activity monitoring engine
+- Jira REST API
+- Salesforce REST API
+
+## Support
+
+For issues and questions:
+- GitHub Issues: https://github.com/UltraInstinct0x/WorkToJiraEffort/issues
+

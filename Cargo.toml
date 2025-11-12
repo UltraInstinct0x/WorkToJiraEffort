@@ -1,0 +1,36 @@
+[package]
+name = "work-to-jira-effort"
+version = "0.1.0"
+edition = "2021"
+authors = ["WorkToJiraEffort Contributors"]
+description = "Automatically track work time via Screenpipe and log to Jira & Salesforce"
+license = "MIT"
+
+[dependencies]
+# HTTP client for API calls
+reqwest = { version = "0.12", features = ["json", "blocking"] }
+# JSON serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+# Configuration management
+config = "0.14"
+toml = "0.8"
+# Async runtime
+tokio = { version = "1.41", features = ["full"] }
+# Error handling
+anyhow = "1.0"
+thiserror = "1.0"
+# Logging
+env_logger = "0.11"
+log = "0.4"
+# CLI argument parsing
+clap = { version = "4.5", features = ["derive"] }
+# Date/time handling
+chrono = { version = "0.4", features = ["serde"] }
+# Cross-platform directories
+directories = "5.0"
+# URL parsing
+url = "2.5"
+
+# Additional dependencies
+regex = "1.12"

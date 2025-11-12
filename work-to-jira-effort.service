@@ -1,0 +1,28 @@
+# Example systemd service file for Linux
+# Copy this to /etc/systemd/system/work-to-jira-effort.service
+# and update the paths as needed
+
+[Unit]
+Description=Work Time to Jira/Salesforce Effort Logger
+After=network.target
+Requires=network.target
+
+[Service]
+Type=simple
+User=youruser
+Group=yourgroup
+WorkingDirectory=/home/youruser
+ExecStart=/path/to/work-to-jira-effort start
+Restart=on-failure
+RestartSec=10
+Environment="RUST_LOG=info"
+
+# Security settings
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=/home/youruser/.config/worktojiraeffort
+
+[Install]
+WantedBy=multi-user.target
