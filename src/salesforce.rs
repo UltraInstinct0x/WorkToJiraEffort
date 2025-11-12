@@ -1,6 +1,6 @@
+use crate::screenpipe::Activity;
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
-use crate::screenpipe::Activity;
 
 #[derive(Debug, Serialize)]
 #[allow(dead_code)]
@@ -112,9 +112,12 @@ impl SalesforceClient {
             .context("No access token available")?
             .clone();
 
-        // Note: This uses a custom Time Entry object. 
+        // Note: This uses a custom Time Entry object.
         // You may need to adjust this based on your Salesforce setup
-        let url = format!("{}/services/data/v58.0/sobjects/TimeEntry__c", self.instance_url);
+        let url = format!(
+            "{}/services/data/v58.0/sobjects/TimeEntry__c",
+            self.instance_url
+        );
 
         let time_entry = TimeEntry {
             name: format!("Auto-tracked: {}", activity.app_name),
@@ -135,18 +138,18 @@ impl SalesforceClient {
         if !response.status().is_success() {
             let status = response.status();
             let text = response.text().await.unwrap_or_default();
-            
+
             // If unauthorized, try to re-authenticate once
             if status == reqwest::StatusCode::UNAUTHORIZED {
                 log::warn!("Salesforce token expired, re-authenticating...");
                 self.access_token = None;
                 self.authenticate().await?;
-                
+
                 let new_token = self
                     .access_token
                     .as_ref()
                     .context("No access token after re-authentication")?;
-                
+
                 let retry_response = self
                     .client
                     .post(&url)
@@ -155,21 +158,31 @@ impl SalesforceClient {
                     .send()
                     .await
                     .context("Failed to log time to Salesforce after re-auth")?;
-                
+
                 if !retry_response.status().is_success() {
                     let retry_status = retry_response.status();
                     let retry_text = retry_response.text().await.unwrap_or_default();
-                    anyhow::bail!("Salesforce API error after re-auth ({}): {}", retry_status, retry_text);
+                    anyhow::bail!(
+                        "Salesforce API error after re-auth ({}): {}",
+                        retry_status,
+                        retry_text
+                    );
                 }
-                
-                log::info!("Logged {} minutes to Salesforce", activity.duration_secs / 60);
+
+                log::info!(
+                    "Logged {} minutes to Salesforce",
+                    activity.duration_secs / 60
+                );
                 return Ok(());
             }
-            
+
             anyhow::bail!("Salesforce API error ({}): {}", status, text);
         }
 
-        log::info!("Logged {} minutes to Salesforce", activity.duration_secs / 60);
+        log::info!(
+            "Logged {} minutes to Salesforce",
+            activity.duration_secs / 60
+        );
         Ok(())
     }
 

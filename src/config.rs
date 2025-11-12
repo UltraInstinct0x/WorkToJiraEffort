@@ -62,7 +62,7 @@ impl Default for Config {
                 enabled: false,
             },
             tracking: TrackingConfig {
-                poll_interval_secs: 300, // 5 minutes
+                poll_interval_secs: 300,        // 5 minutes
                 min_activity_duration_secs: 60, // 1 minute
             },
         }
@@ -72,7 +72,7 @@ impl Default for Config {
 impl Config {
     pub fn load() -> Result<Self> {
         let config_path = Self::config_path()?;
-        
+
         if !config_path.exists() {
             let config = Self::default();
             config.save()?;
@@ -80,38 +80,35 @@ impl Config {
             return Ok(config);
         }
 
-        let content = std::fs::read_to_string(&config_path)
-            .context("Failed to read config file")?;
-        
-        let config: Config = toml::from_str(&content)
-            .context("Failed to parse config file")?;
-        
+        let content =
+            std::fs::read_to_string(&config_path).context("Failed to read config file")?;
+
+        let config: Config = toml::from_str(&content).context("Failed to parse config file")?;
+
         Ok(config)
     }
 
     pub fn save(&self) -> Result<()> {
         let config_path = Self::config_path()?;
-        
+
         if let Some(parent) = config_path.parent() {
-            std::fs::create_dir_all(parent)
-                .context("Failed to create config directory")?;
+            std::fs::create_dir_all(parent).context("Failed to create config directory")?;
         }
 
-        let content = toml::to_string_pretty(self)
-            .context("Failed to serialize config")?;
-        
-        std::fs::write(&config_path, content)
-            .context("Failed to write config file")?;
-        
+        let content = toml::to_string_pretty(self).context("Failed to serialize config")?;
+
+        std::fs::write(&config_path, content).context("Failed to write config file")?;
+
         Ok(())
     }
 
     fn config_path() -> Result<PathBuf> {
-        let config_dir = directories::ProjectDirs::from("com", "WorkToJiraEffort", "WorkToJiraEffort")
-            .context("Failed to determine config directory")?
-            .config_dir()
-            .to_path_buf();
-        
+        let config_dir =
+            directories::ProjectDirs::from("com", "WorkToJiraEffort", "WorkToJiraEffort")
+                .context("Failed to determine config directory")?
+                .config_dir()
+                .to_path_buf();
+
         Ok(config_dir.join("config.toml"))
     }
 }

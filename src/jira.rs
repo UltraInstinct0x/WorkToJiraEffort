@@ -1,6 +1,6 @@
+use crate::screenpipe::Activity;
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
-use crate::screenpipe::Activity;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct WorklogEntry {
@@ -39,8 +39,7 @@ impl JiraClient {
         let worklog = WorklogEntry {
             comment: format!(
                 "Auto-tracked: {} - {}",
-                activity.app_name,
-                activity.window_title
+                activity.app_name, activity.window_title
             ),
             time_spent_seconds: activity.duration_secs,
             started: activity.timestamp.to_rfc3339(),
@@ -66,29 +65,33 @@ impl JiraClient {
             .await
             .context("Failed to parse Jira response")?;
 
-        log::info!("Logged {} seconds to Jira issue {}", activity.duration_secs, issue_key);
+        log::info!(
+            "Logged {} seconds to Jira issue {}",
+            activity.duration_secs,
+            issue_key
+        );
         Ok(())
     }
 
     pub async fn find_issue_from_activity(&self, activity: &Activity) -> Result<Option<String>> {
         // Simple heuristic: look for Jira issue keys (e.g., PROJ-123) in window title or app name
         let text = format!("{} {}", activity.window_title, activity.app_name);
-        
+
         // Regex pattern for Jira issue keys
         let issue_key_regex = regex::Regex::new(r"([A-Z]+-\d+)").unwrap();
-        
+
         if let Some(captures) = issue_key_regex.captures(&text) {
             if let Some(issue_key) = captures.get(1) {
                 return Ok(Some(issue_key.as_str().to_string()));
             }
         }
-        
+
         Ok(None)
     }
 
     pub async fn health_check(&self) -> Result<bool> {
         let url = format!("{}/rest/api/3/myself", self.base_url);
-        
+
         match self
             .client
             .get(&url)

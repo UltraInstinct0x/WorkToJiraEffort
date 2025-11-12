@@ -1,12 +1,12 @@
-use anyhow::Result;
-use chrono::{DateTime, Duration, Utc};
-use std::collections::HashMap;
 use crate::{
     config::Config,
     jira::JiraClient,
     salesforce::SalesforceClient,
     screenpipe::{Activity, ScreenpipeClient},
 };
+use anyhow::Result;
+use chrono::{DateTime, Duration, Utc};
+use std::collections::HashMap;
 
 pub struct WorkTracker {
     config: Config,
@@ -19,7 +19,7 @@ pub struct WorkTracker {
 impl WorkTracker {
     pub fn new(config: Config) -> Self {
         let screenpipe = ScreenpipeClient::new(config.screenpipe.url.clone());
-        
+
         let jira = if config.jira.enabled {
             Some(JiraClient::new(
                 config.jira.url.clone(),
@@ -74,7 +74,10 @@ impl WorkTracker {
     pub async fn sync(&mut self) -> Result<()> {
         log::info!("Fetching activities since {}", self.last_sync);
 
-        let activities = self.screenpipe.get_recent_activities(self.last_sync).await?;
+        let activities = self
+            .screenpipe
+            .get_recent_activities(self.last_sync)
+            .await?;
         log::info!("Found {} activities", activities.len());
 
         if activities.is_empty() {
@@ -120,7 +123,7 @@ impl WorkTracker {
 
         for activity in activities {
             let key = format!("{}:{}", activity.app_name, activity.window_title);
-            
+
             consolidated
                 .entry(key)
                 .and_modify(|existing| {
@@ -133,7 +136,10 @@ impl WorkTracker {
     }
 
     pub async fn run(&mut self, interval_secs: u64) -> Result<()> {
-        log::info!("Starting work tracker (polling every {} seconds)...", interval_secs);
+        log::info!(
+            "Starting work tracker (polling every {} seconds)...",
+            interval_secs
+        );
 
         loop {
             match self.sync().await {

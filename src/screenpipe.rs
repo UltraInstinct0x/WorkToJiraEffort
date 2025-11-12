@@ -40,7 +40,7 @@ impl ScreenpipeClient {
 
     pub async fn get_recent_activities(&self, since: DateTime<Utc>) -> Result<Vec<Activity>> {
         let url = format!("{}/search", self.base_url);
-        
+
         // Screenpipe API parameters
         let params: HashMap<&str, String> = [
             ("start_time", since.timestamp().to_string()),
@@ -88,7 +88,7 @@ impl ScreenpipeClient {
 
     pub async fn health_check(&self) -> Result<bool> {
         let url = format!("{}/health", self.base_url);
-        
+
         match self.client.get(&url).send().await {
             Ok(response) => Ok(response.status().is_success()),
             Err(_) => Ok(false),

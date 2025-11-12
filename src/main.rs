@@ -1,7 +1,7 @@
 mod config;
-mod screenpipe;
 mod jira;
 mod salesforce;
+mod screenpipe;
 mod tracker;
 
 use anyhow::Result;
@@ -40,18 +40,22 @@ async fn main() -> Result<()> {
             config.save()?;
             println!("Configuration file created successfully!");
             println!("Please edit the configuration file with your credentials.");
-            println!("Config location: {:?}", std::env::var("HOME").map(|h| format!("{}/.config/WorkToJiraEffort/config.toml", h)));
+            println!(
+                "Config location: {:?}",
+                std::env::var("HOME")
+                    .map(|h| format!("{}/.config/WorkToJiraEffort/config.toml", h))
+            );
             Ok(())
         }
         Commands::Check => {
             println!("Loading configuration...");
             let config = Config::load()?;
             println!("Configuration loaded successfully!");
-            
+
             println!("\nChecking service connectivity...");
             let mut tracker = WorkTracker::new(config);
             tracker.check_health().await?;
-            
+
             println!("\nAll checks completed!");
             Ok(())
         }
@@ -59,18 +63,20 @@ async fn main() -> Result<()> {
             println!("Starting work time tracker...");
             let config = Config::load()?;
             let interval = config.tracking.poll_interval_secs;
-            
+
             let mut tracker = WorkTracker::new(config);
-            
+
             println!("Checking service health before starting...");
             tracker.check_health().await?;
-            
-            println!("\nStarting continuous tracking (polling every {} seconds)...", interval);
+
+            println!(
+                "\nStarting continuous tracking (polling every {} seconds)...",
+                interval
+            );
             println!("Press Ctrl+C to stop");
-            
+
             tracker.run(interval).await?;
             Ok(())
         }
     }
 }
-
