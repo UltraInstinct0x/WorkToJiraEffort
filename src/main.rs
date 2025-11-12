@@ -11,6 +11,7 @@ use tracker::WorkTracker;
 
 #[derive(Parser)]
 #[command(name = "work-to-jira-effort")]
+#[command(version = "0.1.0")]
 #[command(about = "Automatically track work time via Screenpipe and log to Jira & Salesforce", long_about = None)]
 struct Cli {
     #[command(subcommand)]
