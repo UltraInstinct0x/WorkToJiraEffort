@@ -24,12 +24,11 @@ impl ScreenpipeManager {
         self.data_dir = data_dir.clone();
 
         // Ensure data directory exists
-        std::fs::create_dir_all(&data_dir)
-            .context("Failed to create Screenpipe data directory")?;
+        std::fs::create_dir_all(&data_dir).context("Failed to create Screenpipe data directory")?;
 
         // Try to find screenpipe binary
         let screenpipe_path = self.find_screenpipe_binary()?;
-        
+
         info!("Found Screenpipe binary at: {:?}", screenpipe_path);
 
         // Start screenpipe process
@@ -38,7 +37,7 @@ impl ScreenpipeManager {
             .arg(port.to_string())
             .arg("--data-dir")
             .arg(data_dir.to_string_lossy().to_string())
-            .arg("--disable-audio")  // Simplify by disabling audio initially
+            .arg("--disable-audio") // Simplify by disabling audio initially
             .stdout(Stdio::null())
             .stderr(Stdio::null())
             .spawn()
@@ -52,7 +51,7 @@ impl ScreenpipeManager {
         // Verify the server is running
         let client = reqwest::Client::new();
         let health_url = format!("http://localhost:{}/health", port);
-        
+
         match client.get(&health_url).send().await {
             Ok(resp) if resp.status().is_success() => {
                 info!("Screenpipe server started successfully and is healthy");
@@ -90,14 +89,14 @@ impl ScreenpipeManager {
             // Windows locations
             dirs::home_dir().map(|h| h.join("AppData/Local/screenpipe/screenpipe.exe")),
             // macOS locations
-            Some(PathBuf::from("/Applications/screenpipe.app/Contents/MacOS/screenpipe")),
+            Some(PathBuf::from(
+                "/Applications/screenpipe.app/Contents/MacOS/screenpipe",
+            )),
         ];
 
-        for path_opt in possible_paths {
-            if let Some(path) = path_opt {
-                if path.exists() {
-                    return Ok(path);
-                }
+        for path in possible_paths.into_iter().flatten() {
+            if path.exists() {
+                return Ok(path);
             }
         }
 
@@ -165,7 +164,7 @@ impl ScreenpipeManager {
                 // Send SIGTERM to gracefully shutdown
                 use nix::sys::signal::{kill, Signal};
                 use nix::unistd::Pid;
-                
+
                 let pid = process.id();
                 let _ = kill(Pid::from_raw(pid as i32), Signal::SIGTERM);
             }
@@ -200,11 +199,6 @@ impl ScreenpipeManager {
 
         Ok(())
     }
-
-    /// Check if the server is running
-    pub fn is_running(&self) -> bool {
-        self.process.is_some()
-    }
 }
 
 impl Drop for ScreenpipeManager {
@@ -214,4 +208,3 @@ impl Drop for ScreenpipeManager {
         }
     }
 }
-

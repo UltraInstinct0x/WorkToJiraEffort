@@ -8,10 +8,10 @@ mod tracker;
 use anyhow::Result;
 use clap::{Parser, Subcommand};
 use config::Config;
-use screenpipe_manager::ScreenpipeManager;
-use tracker::WorkTracker;
-use std::path::PathBuf;
 use directories::ProjectDirs;
+use screenpipe_manager::ScreenpipeManager;
+use std::path::PathBuf;
+use tracker::WorkTracker;
 
 #[derive(Parser)]
 #[command(name = "work-to-jira-effort")]
@@ -59,12 +59,12 @@ async fn main() -> Result<()> {
 
             // Get data directory for embedded Screenpipe
             let data_dir = get_data_dir()?;
-            
+
             // Start embedded Screenpipe server
             println!("\nStarting embedded Screenpipe server...");
             let mut screenpipe = ScreenpipeManager::new();
             screenpipe.start(data_dir, 3030).await?;
-            
+
             println!("\nChecking service connectivity...");
             let mut tracker = WorkTracker::new(config);
             tracker.check_health().await?;
@@ -82,7 +82,7 @@ async fn main() -> Result<()> {
 
             // Get data directory for embedded Screenpipe
             let data_dir = get_data_dir()?;
-            
+
             // Start embedded Screenpipe server
             println!("Starting embedded Screenpipe server...");
             let mut screenpipe = ScreenpipeManager::new();
@@ -120,9 +120,9 @@ async fn main() -> Result<()> {
 fn get_data_dir() -> Result<PathBuf> {
     let proj_dirs = ProjectDirs::from("com", "worktojiraeffort", "WorkToJiraEffort")
         .ok_or_else(|| anyhow::anyhow!("Failed to determine project directories"))?;
-    
+
     let data_dir = proj_dirs.data_dir().join("screenpipe");
     std::fs::create_dir_all(&data_dir)?;
-    
+
     Ok(data_dir)
 }

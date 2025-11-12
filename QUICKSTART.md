@@ -4,14 +4,12 @@ Get up and running with WorkToJiraEffort in 5 minutes!
 
 ## Prerequisites
 
-1. **Screenpipe** must be installed and running
-   - Download from: https://github.com/mediar-ai/screenpipe
-   - Start Screenpipe (usually runs on http://localhost:3030)
-
-2. **Jira API Token** (if using Jira integration)
+1. **Jira API Token** (if using Jira integration)
    - Go to: https://id.atlassian.com/manage-profile/security/api-tokens
    - Click "Create API token"
    - Copy the token (you'll need it later)
+
+**Note**: Screenpipe is now embedded! The application will automatically install and manage Screenpipe for you - no separate installation needed!
 
 ## Installation
 
@@ -117,10 +115,12 @@ work-to-jira-effort start
 ```
 
 The app will now:
-1. Monitor your activities via Screenpipe
-2. Look for Jira issue keys in window titles (e.g., PROJ-123)
-3. Automatically log time to matching Jira issues
-4. Log to Salesforce if enabled
+1. Automatically start the embedded Screenpipe server
+2. Monitor your activities via Screenpipe
+3. Look for Jira issue keys in window titles (e.g., PROJ-123)
+4. Automatically log time to matching Jira issues
+5. Log to Salesforce if enabled
+6. Gracefully stop Screenpipe when you exit
 
 ## How to Use
 
@@ -176,14 +176,21 @@ sudo journalctl -u work-to-jira-effort -f
 
 ## Troubleshooting
 
-### Screenpipe Not Found
+### First Run Takes Longer
 
-```bash
-# Check if Screenpipe is running
-curl http://localhost:3030/health
-```
+On the first run, the application will:
+- Automatically download and install Screenpipe (if not already present)
+- Set up necessary directories
+- Start Screenpipe in the background
 
-If not running, start Screenpipe first.
+This is normal and subsequent runs will be much faster.
+
+### Screenpipe Installation Issues
+
+The application will attempt to install Screenpipe automatically. If this fails:
+- Ensure you have internet connectivity
+- Check that you have write permissions in your home directory
+- Manually install Screenpipe from: https://github.com/mediar-ai/screenpipe
 
 ### Jira Authentication Failed
 

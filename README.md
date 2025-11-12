@@ -5,7 +5,8 @@ Automatically track your work time via Screenpipe and log effort to Jira & Sales
 ## Overview
 
 WorkToJiraEffort is a cross-platform (Linux, Windows, macOS) application written in Rust that:
-- Monitors your work activities using [Screenpipe](https://github.com/mediar-ai/screenpipe)
+- **Automatically manages Screenpipe** - No separate installation needed!
+- Monitors your work activities using the embedded [Screenpipe](https://github.com/mediar-ai/screenpipe)
 - Automatically detects Jira issue keys from your active applications
 - Logs work time to Jira issues
 - Optionally logs time entries to Salesforce
@@ -13,29 +14,28 @@ WorkToJiraEffort is a cross-platform (Linux, Windows, macOS) application written
 
 ## Features
 
-- 🔄 **Automatic Time Tracking**: Monitors your active windows and applications via Screenpipe
+- 🔄 **Automatic Time Tracking**: Monitors your active windows and applications via embedded Screenpipe
 - 🎯 **Smart Jira Detection**: Automatically finds Jira issue keys (e.g., PROJ-123) in window titles
 - 📊 **Dual Platform Support**: Logs time to both Jira and Salesforce
 - ⚙️ **Configurable**: Customizable polling intervals and minimum activity duration
 - 🔒 **Secure**: API credentials stored in local configuration file
 - 🖥️ **Cross-Platform**: Works on Linux, Windows, and macOS
+- 🚀 **Zero Setup**: Screenpipe is automatically installed and managed - no external dependencies!
 
 ## Prerequisites
 
-1. **Screenpipe**: You need to have Screenpipe running locally
-   - Install from: https://github.com/mediar-ai/screenpipe
-   - Default URL: `http://localhost:3030`
-
-2. **Jira Account** (optional but recommended):
+1. **Jira Account** (optional but recommended):
    - Jira instance URL
    - Email address
    - API token (generate at: https://id.atlassian.com/manage-profile/security/api-tokens)
 
-3. **Salesforce Account** (optional):
+2. **Salesforce Account** (optional):
    - Instance URL
    - Username and password
    - Security token
    - Connected app credentials (client ID and secret)
+
+**Note**: Screenpipe is now embedded in the application and will be automatically installed and managed. You no longer need to install or run it separately!
 
 ## Installation
 
@@ -119,12 +119,14 @@ work-to-jira-effort start
 ```
 
 The application will:
-1. Connect to Screenpipe
-2. Poll for recent activities at the configured interval
-3. Consolidate activities by application/window
-4. Extract Jira issue keys from window titles
-5. Log time to matching Jira issues
-6. Log time to Salesforce (if enabled)
+1. Start the embedded Screenpipe server automatically
+2. Connect to Screenpipe
+3. Poll for recent activities at the configured interval
+4. Consolidate activities by application/window
+5. Extract Jira issue keys from window titles
+6. Log time to matching Jira issues
+7. Log time to Salesforce (if enabled)
+8. Stop Screenpipe gracefully when you exit
 
 Press `Ctrl+C` to stop tracking.
 
@@ -183,13 +185,22 @@ The application is structured into several modules:
 
 ## Troubleshooting
 
-### Screenpipe Not Responding
+### First Time Setup
 
-Ensure Screenpipe is running:
-```bash
-# Check if Screenpipe is accessible
-curl http://localhost:3030/health
-```
+On first run, the application will automatically:
+- Download and install Screenpipe if not already present
+- Set up the necessary data directories
+- Start Screenpipe in the background
+
+This may take a few moments. Subsequent runs will be much faster.
+
+### Screenpipe Issues
+
+The application manages Screenpipe automatically. If you encounter issues:
+1. The app will attempt to install Screenpipe automatically
+2. Check logs for any installation errors
+3. Ensure you have internet connectivity for first-time installation
+4. If automatic installation fails, you can manually install from: https://github.com/mediar-ai/screenpipe
 
 ### Jira Authentication Failed
 
