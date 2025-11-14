@@ -45,11 +45,8 @@ async fn main() -> Result<()> {
             config.save()?;
             println!("Configuration file created successfully!");
             println!("Please edit the configuration file with your credentials.");
-            println!(
-                "Config location: {:?}",
-                std::env::var("HOME")
-                    .map(|h| format!("{}/.config/WorkToJiraEffort/config.toml", h))
-            );
+            let config_path = Config::config_path()?;
+            println!("Config location: {}", config_path.display());
             Ok(())
         }
         Commands::Check => {

@@ -1,7 +1,8 @@
 use anyhow::{Context, Result};
 use std::path::PathBuf;
 use std::process::{Child, Command, Stdio};
-use tracing::{info, warn};
+use std::time::Duration;
+use tracing::{debug, info, warn};
 
 /// Manages the embedded Screenpipe server lifecycle as a subprocess
 pub struct ScreenpipeManager {
@@ -45,32 +46,45 @@ impl ScreenpipeManager {
 
         self.process = Some(process);
 
-        // Give the server time to start
-        tokio::time::sleep(tokio::time::Duration::from_secs(3)).await;
-
-        // Verify the server is running
+        // Verify the server is running, allowing extra time for startup
         let client = reqwest::Client::new();
         let health_url = format!("http://localhost:{}/health", port);
+        let startup_timeout = Duration::from_secs(30);
+        let poll_interval = Duration::from_secs(1);
+        let start_time = std::time::Instant::now();
 
-        match client.get(&health_url).send().await {
-            Ok(resp) if resp.status().is_success() => {
-                info!("Screenpipe server started successfully and is healthy");
-                Ok(())
+        loop {
+            match client.get(&health_url).send().await {
+                Ok(resp) if resp.status().is_success() => {
+                    info!("Screenpipe server started successfully and is healthy");
+                    return Ok(());
+                }
+                Ok(resp) => {
+                    if start_time.elapsed() >= startup_timeout {
+                        self.stop().await?;
+                        return Err(anyhow::anyhow!(
+                            "Screenpipe server health check failed with status: {}",
+                            resp.status()
+                        ));
+                    }
+                    debug!(
+                        "Waiting for Screenpipe to become ready: health endpoint returned {}",
+                        resp.status()
+                    );
+                }
+                Err(e) => {
+                    if start_time.elapsed() >= startup_timeout {
+                        self.stop().await?;
+                        return Err(anyhow::anyhow!(
+                            "Failed to connect to Screenpipe server: {}",
+                            e
+                        ));
+                    }
+                    debug!("Waiting for Screenpipe to become ready: {}", e);
+                }
             }
-            Ok(resp) => {
-                self.stop().await?;
-                Err(anyhow::anyhow!(
-                    "Screenpipe server health check failed with status: {}",
-                    resp.status()
-                ))
-            }
-            Err(e) => {
-                self.stop().await?;
-                Err(anyhow::anyhow!(
-                    "Failed to connect to Screenpipe server: {}",
-                    e
-                ))
-            }
+
+            tokio::time::sleep(poll_interval).await;
         }
     }
 

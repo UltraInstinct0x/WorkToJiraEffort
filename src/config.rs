@@ -102,7 +102,7 @@ impl Config {
         Ok(())
     }
 
-    fn config_path() -> Result<PathBuf> {
+    pub fn config_path() -> Result<PathBuf> {
         let config_dir =
             directories::ProjectDirs::from("com", "WorkToJiraEffort", "WorkToJiraEffort")
                 .context("Failed to determine config directory")?

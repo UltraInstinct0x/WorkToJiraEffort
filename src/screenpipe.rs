@@ -43,8 +43,8 @@ impl ScreenpipeClient {
 
         // Screenpipe API parameters
         let params: HashMap<&str, String> = [
-            ("start_time", since.timestamp().to_string()),
-            ("end_time", Utc::now().timestamp().to_string()),
+            ("start_timestamp", since.timestamp().to_string()),
+            ("end_timestamp", Utc::now().timestamp().to_string()),
             ("limit", "100".to_string()),
         ]
         .iter()
