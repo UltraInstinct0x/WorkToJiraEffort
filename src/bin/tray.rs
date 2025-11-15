@@ -25,7 +25,6 @@ struct IssueRequest {
 
 struct AppState {
     daemon_process: Option<Child>,
-    current_status: Option<StatusResponse>,
 }
 
 fn main() -> Result<()> {
@@ -33,7 +32,6 @@ fn main() -> Result<()> {
 
     let state = Arc::new(Mutex::new(AppState {
         daemon_process: None,
-        current_status: None,
     }));
 
     // Try to start daemon
@@ -44,8 +42,10 @@ fn main() -> Result<()> {
 
     // Create tray icon
     let tray_icon = create_tray_icon()?;
-    let menu = create_menu(&state)?;
-    tray_icon.set_menu(Some(Box::new(menu.clone())));
+
+    // Create initial menu
+    let menu = create_menu()?;
+    tray_icon.set_menu(Some(Box::new(menu)));
 
     println!("WorkToJiraEffort menubar app started!");
     println!("Daemon running on port {}", DAEMON_PORT);
@@ -54,20 +54,10 @@ fn main() -> Result<()> {
     let menu_channel = MenuEvent::receiver();
     let state_clone = Arc::clone(&state);
 
-    // Periodic status update
-    let state_for_update = Arc::clone(&state);
-    let menu_for_update = menu.clone();
-    thread::spawn(move || loop {
-        thread::sleep(Duration::from_secs(5));
-        if let Err(e) = update_status(&state_for_update, &menu_for_update) {
-            log::warn!("Failed to update status: {}", e);
-        }
-    });
-
     // Handle menu events
     loop {
         if let Ok(event) = menu_channel.recv() {
-            if let Err(e) = handle_menu_event(event, &state_clone, &menu, &tray_icon) {
+            if let Err(e) = handle_menu_event(event, &state_clone, &tray_icon) {
                 log::error!("Error handling menu event: {}", e);
             }
         }
@@ -156,24 +146,28 @@ fn create_icon_image() -> tray_icon::Icon {
     tray_icon::Icon::from_rgba(rgba, 32, 32).expect("Failed to create icon")
 }
 
-fn create_menu(state: &Arc<Mutex<AppState>>) -> Result<Menu> {
+fn create_menu() -> Result<Menu> {
     let menu = Menu::new();
 
-    // Status item
-    let state = state.lock().unwrap();
-    let status_text = if let Some(ref status) = state.current_status {
-        if let Some(ref issue) = status.issue_override {
-            format!("Current: {}", issue)
-        } else {
-            "No override set".to_string()
+    // Status item - get current status from daemon
+    let status_text = match get_status() {
+        Ok(status) => {
+            if let Some(ref issue) = status.issue_override {
+                format!("Current: {}", issue)
+            } else {
+                "No override set".to_string()
+            }
         }
-    } else {
-        "Loading...".to_string()
+        Err(_) => "Status: Unknown".to_string(),
     };
-    drop(state);
 
     let status_item = MenuItem::new(status_text, false, None);
     menu.append(&status_item)?;
+    menu.append(&PredefinedMenuItem::separator())?;
+
+    // Refresh status
+    let refresh = MenuItem::new("Refresh Status", true, None);
+    menu.append(&refresh)?;
     menu.append(&PredefinedMenuItem::separator())?;
 
     // Common issue shortcuts
@@ -199,48 +193,16 @@ fn create_menu(state: &Arc<Mutex<AppState>>) -> Result<Menu> {
     Ok(menu)
 }
 
-fn update_status(state: &Arc<Mutex<AppState>>, menu: &Menu) -> Result<()> {
-    match get_status() {
-        Ok(status) => {
-            let mut state = state.lock().unwrap();
-            state.current_status = Some(status.clone());
-            drop(state);
-
-            // Update menu status item
-            let status_text = if let Some(ref issue) = status.issue_override {
-                format!("Current: {}", issue)
-            } else {
-                "No override set".to_string()
-            };
-
-            // Recreate the first item with new text
-            if let Some(items) = menu.items() {
-                if let Some(first) = items.first() {
-                    if let Some(menu_item) = first.as_menuitem() {
-                        menu_item.set_text(status_text);
-                    }
-                }
-            }
-
-            Ok(())
-        }
-        Err(e) => {
-            log::warn!("Failed to get status: {}", e);
-            Err(e)
-        }
-    }
-}
-
 fn handle_menu_event(
     event: MenuEvent,
     state: &Arc<Mutex<AppState>>,
-    menu: &Menu,
-    _tray_icon: &TrayIcon,
+    tray_icon: &TrayIcon,
 ) -> Result<()> {
     let id = event.id();
 
-    // Get the menu item text to identify which action to take
-    let items = menu.items().unwrap_or_default();
+    // Get the menu to find which item was clicked
+    let menu = tray_icon.menu().unwrap();
+    let items = menu.items();
     let clicked_item = items.iter().find(|item| {
         if let Some(menu_item) = item.as_menuitem() {
             menu_item.id() == &id
@@ -261,7 +223,9 @@ fn handle_menu_event(
                 match set_issue_override(Some(issue.clone())) {
                     Ok(_) => {
                         println!("Issue override set to: {}", issue);
-                        update_status(state, menu)?;
+                        // Recreate menu with updated status
+                        let new_menu = create_menu()?;
+                        tray_icon.set_menu(Some(Box::new(new_menu)));
                     }
                     Err(e) => {
                         log::error!("Failed to set issue override: {}", e);
@@ -272,12 +236,19 @@ fn handle_menu_event(
                 match set_issue_override(None) {
                     Ok(_) => {
                         println!("Issue override cleared");
-                        update_status(state, menu)?;
+                        // Recreate menu with updated status
+                        let new_menu = create_menu()?;
+                        tray_icon.set_menu(Some(Box::new(new_menu)));
                     }
                     Err(e) => {
                         log::error!("Failed to clear issue override: {}", e);
                     }
                 }
+            } else if text == "Refresh Status" {
+                println!("Refreshing status...");
+                // Recreate menu with updated status
+                let new_menu = create_menu()?;
+                tray_icon.set_menu(Some(Box::new(new_menu)));
             } else if text == "Quit" {
                 println!("Quitting...");
                 // Kill daemon if we started it
