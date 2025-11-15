@@ -42,7 +42,10 @@ impl JiraClient {
                 activity.app_name, activity.window_title
             ),
             time_spent_seconds: activity.duration_secs,
-            started: activity.timestamp.to_rfc3339(),
+            started: activity
+                .timestamp
+                .format("%Y-%m-%dT%H:%M:%S%.3f%z")
+                .to_string(),
         };
 
         let response = self

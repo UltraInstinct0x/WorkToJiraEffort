@@ -6,7 +6,8 @@ use crate::{
 };
 use anyhow::Result;
 use chrono::{DateTime, Duration, Utc};
-use std::collections::HashMap;
+use std::{collections::HashMap, sync::Arc};
+use tokio::sync::RwLock;
 
 pub struct WorkTracker {
     config: Config,
@@ -14,10 +15,11 @@ pub struct WorkTracker {
     jira: Option<JiraClient>,
     salesforce: Option<SalesforceClient>,
     last_sync: DateTime<Utc>,
+    issue_override: Arc<RwLock<Option<String>>>,
 }
 
 impl WorkTracker {
-    pub fn new(config: Config) -> Self {
+    pub fn new(config: Config, issue_override: Arc<RwLock<Option<String>>>) -> Self {
         let screenpipe = ScreenpipeClient::new(config.screenpipe.url.clone());
 
         let jira = if config.jira.enabled {
@@ -49,6 +51,7 @@ impl WorkTracker {
             jira,
             salesforce,
             last_sync: Utc::now() - Duration::minutes(5),
+            issue_override,
         }
     }
 
@@ -90,9 +93,26 @@ impl WorkTracker {
 
         // Log to Jira
         if let Some(jira) = &self.jira {
+            let issue_override = {
+                let guard = self.issue_override.read().await;
+                guard.clone()
+            };
+
             for activity in &consolidated {
                 if activity.duration_secs >= self.config.tracking.min_activity_duration_secs {
-                    if let Ok(Some(issue_key)) = jira.find_issue_from_activity(activity).await {
+                    let target_issue = if let Some(issue_key) = &issue_override {
+                        Some(issue_key.clone())
+                    } else {
+                        match jira.find_issue_from_activity(activity).await {
+                            Ok(result) => result,
+                            Err(err) => {
+                                log::error!("Failed to detect Jira issue: {}", err);
+                                None
+                            }
+                        }
+                    };
+
+                    if let Some(issue_key) = target_issue {
                         match jira.log_work(&issue_key, activity).await {
                             Ok(_) => log::info!("Successfully logged to Jira: {}", issue_key),
                             Err(e) => log::error!("Failed to log to Jira: {}", e),
@@ -144,7 +164,7 @@ impl WorkTracker {
         loop {
             match self.sync().await {
                 Ok(_) => log::debug!("Sync completed successfully"),
-                Err(e) => log::error!("Sync failed: {}", e),
+                Err(e) => log::error!("Sync failed: {:#}", e),
             }
 
             tokio::time::sleep(tokio::time::Duration::from_secs(interval_secs)).await;

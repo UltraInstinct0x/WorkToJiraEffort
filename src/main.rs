@@ -1,4 +1,5 @@
 mod config;
+mod daemon;
 mod jira;
 mod salesforce;
 mod screenpipe;
@@ -8,9 +9,11 @@ mod tracker;
 use anyhow::Result;
 use clap::{Parser, Subcommand};
 use config::Config;
+use daemon::run_daemon;
 use directories::ProjectDirs;
 use screenpipe_manager::ScreenpipeManager;
-use std::path::PathBuf;
+use std::{path::PathBuf, sync::Arc};
+use tokio::sync::RwLock;
 use tracker::WorkTracker;
 
 #[derive(Parser)]
@@ -30,6 +33,12 @@ enum Commands {
     Check,
     /// Initialize configuration file
     Init,
+    /// Run daemon for menubar/GUI clients
+    Daemon {
+        /// Port for the local control API
+        #[arg(long, default_value_t = 8787)]
+        port: u16,
+    },
 }
 
 #[tokio::main]
@@ -63,7 +72,7 @@ async fn main() -> Result<()> {
             screenpipe.start(data_dir, 3030).await?;
 
             println!("\nChecking service connectivity...");
-            let mut tracker = WorkTracker::new(config);
+            let mut tracker = WorkTracker::new(config, Arc::new(RwLock::new(None)));
             tracker.check_health().await?;
 
             // Stop Screenpipe server
@@ -85,7 +94,7 @@ async fn main() -> Result<()> {
             let mut screenpipe = ScreenpipeManager::new();
             screenpipe.start(data_dir, 3030).await?;
 
-            let mut tracker = WorkTracker::new(config);
+            let mut tracker = WorkTracker::new(config, Arc::new(RwLock::new(None)));
 
             println!("Checking service health before starting...");
             tracker.check_health().await?;
@@ -109,6 +118,13 @@ async fn main() -> Result<()> {
             screenpipe.stop().await?;
 
             result
+        }
+        Commands::Daemon { port } => {
+            println!(
+                "Starting WorkToJiraEffort daemon on http://127.0.0.1:{}",
+                port
+            );
+            run_daemon(port).await
         }
     }
 }
