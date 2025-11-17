@@ -6,6 +6,20 @@ authors = ["WorkToJiraEffort Contributors"]
 description = "Automatically track work time via Screenpipe and log to Jira & Salesforce"
 license = "MIT"
 
+[package.metadata.bundle]
+name = "WorkToJiraEffort"
+identifier = "com.worktojiraeffort.tray"
+icon = []
+version = "0.1.0"
+resources = []
+copyright = "Copyright (c) 2024 WorkToJiraEffort Contributors"
+category = "Productivity"
+short_description = "Automatic work time tracking for Jira"
+long_description = "Automatically track work time via Screenpipe and log to Jira & Salesforce"
+osx_minimum_system_version = "10.13"
+osx_url_schemes = []
+osx_info_plist_path = "resources/macos/Info.plist"
+
 [dependencies]
 # HTTP client for API calls
 reqwest = { version = "0.12", features = ["json", "blocking"] }
@@ -43,9 +57,13 @@ axum = { version = "0.7", features = ["macros"] }
 tray-icon = { version = "0.18", optional = true }
 image = { version = "0.25", optional = true }
 
+[target.'cfg(target_os = "macos")'.dependencies]
+cocoa = { version = "0.26", optional = true }
+objc = { version = "0.2", optional = true }
+
 [features]
 default = []
-tray = ["dep:tray-icon", "dep:image"]
+tray = ["dep:tray-icon", "dep:image", "dep:cocoa", "dep:objc"]
 
 [target.'cfg(unix)'.dependencies]
 nix = { version = "0.29", features = ["signal"] }

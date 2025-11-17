@@ -5,7 +5,7 @@ use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::Duration;
 use tray_icon::{
-    menu::{Menu, MenuEvent, MenuId, MenuItem, PredefinedMenuItem},
+    menu::{Menu, MenuEvent, MenuId, MenuItem, PredefinedMenuItem, Submenu},
     TrayIcon, TrayIconBuilder,
 };
 
@@ -40,37 +40,108 @@ struct MenuItems {
 fn main() -> Result<()> {
     env_logger::init();
 
+    // On macOS, we MUST activate NSApplication to show menubar icons
+    #[cfg(target_os = "macos")]
+    unsafe {
+        use cocoa::appkit::{NSApp, NSApplication, NSApplicationActivationPolicy};
+        use cocoa::base::nil;
+
+        println!("Initializing macOS NSApplication...");
+        let app = NSApp();
+        if app == nil {
+            eprintln!("ERROR: Failed to get NSApplication!");
+            return Err(anyhow::anyhow!("NSApplication initialization failed"));
+        }
+
+        // Set activation policy to Accessory (menubar only, no Dock icon)
+        app.setActivationPolicy_(NSApplicationActivationPolicy::NSApplicationActivationPolicyAccessory);
+        println!("✓ NSApplication activated with Accessory policy");
+    }
+
     let state = Arc::new(Mutex::new(AppState {
         daemon_process: None,
     }));
 
-    // Try to start daemon
-    start_daemon(&state)?;
+    // Start daemon in BACKGROUND THREAD to not block main thread
+    let state_for_daemon = Arc::clone(&state);
+    thread::spawn(move || {
+        if let Err(e) = start_daemon(&state_for_daemon) {
+            eprintln!("Failed to start daemon: {}", e);
+        }
+    });
 
-    // Wait a bit for daemon to start
-    thread::sleep(Duration::from_secs(2));
+    println!("Creating tray icon...");
 
     // Create tray icon
-    let tray_icon = create_tray_icon()?;
+    let tray_icon = create_tray_icon()
+        .context("Failed to create tray icon")?;
+
+    println!("Tray icon created successfully!");
+
+    // Wait briefly for daemon to start, but don't block
+    thread::sleep(Duration::from_millis(500));
 
     // Create initial menu and track menu item IDs
+    println!("Creating menu...");
     let menu_items = create_menu(&tray_icon)?;
 
     println!("WorkToJiraEffort menubar app started!");
     println!("Daemon running on port {}", DAEMON_PORT);
+    println!("Look for the blue icon in your menubar (top-right corner)");
+
+    // Keep references alive
+    let _tray_icon = tray_icon;
+    let _menu_items = menu_items;
 
     // Start menu event listener
     let menu_channel = MenuEvent::receiver();
-    let state_clone = Arc::clone(&state);
 
-    // Handle menu events
+    println!("Event loop starting...");
+
+    // Handle menu events with NON-BLOCKING timeout to prevent freezing
+    // AND pump the macOS event loop so the menubar icon appears
     loop {
-        if let Ok(event) = menu_channel.recv() {
-            if let Err(e) = handle_menu_event(event, &state_clone, &tray_icon, &menu_items) {
-                log::error!("Error handling menu event: {}", e);
+        // Process macOS events to make menubar icon visible AND responsive
+        #[cfg(target_os = "macos")]
+        unsafe {
+            use cocoa::base::id;
+            use objc::runtime::Class;
+            use objc::{msg_send, sel, sel_impl};
+
+            let _pool: id = msg_send![Class::get("NSAutoreleasePool").unwrap(), new];
+
+            // Get current run loop
+            let run_loop_class = Class::get("NSRunLoop").unwrap();
+            let run_loop: id = msg_send![run_loop_class, currentRunLoop];
+
+            // Create date 100ms in the future for smoother event processing
+            let date_class = Class::get("NSDate").unwrap();
+            let date: id = msg_send![date_class, dateWithTimeIntervalSinceNow: 0.1f64];
+
+            // Run the run loop in common modes to handle UI events
+            let mode: id = msg_send![Class::get("NSString").unwrap(), stringWithUTF8String: "kCFRunLoopCommonModes\0".as_ptr()];
+            let _: () = msg_send![run_loop, runMode:mode beforeDate:date];
+        }
+
+        // Check for menu events with longer timeout to reduce CPU usage
+        match menu_channel.recv_timeout(Duration::from_millis(100)) {
+            Ok(event) => {
+                println!("Menu event received: {:?}", event.id);
+                if let Err(e) = handle_menu_event(event, &state, &_tray_icon, &_menu_items) {
+                    log::error!("Error handling menu event: {}", e);
+                }
+            }
+            Err(e) if e.is_timeout() => {
+                // Normal - just keep looping
+            }
+            Err(_) => {
+                eprintln!("Menu event channel disconnected");
+                break;
             }
         }
     }
+
+    Ok(())
 }
 
 fn start_daemon(state: &Arc<Mutex<AppState>>) -> Result<()> {
@@ -130,21 +201,28 @@ fn set_issue_override(issue_key: Option<String>) -> Result<StatusResponse> {
 
 fn create_tray_icon() -> Result<TrayIcon> {
     // Create a simple icon (a colored square)
+    println!("Generating icon image...");
     let icon = create_icon_image();
+    println!("Icon image generated (22x22 RGBA)");
 
+    println!("Building tray icon...");
     let tray_icon = TrayIconBuilder::new()
         .with_tooltip("WorkToJiraEffort")
         .with_icon(icon)
-        .build()?;
+        .build()
+        .context("TrayIconBuilder failed")?;
+
+    println!("TrayIcon built successfully!");
 
     Ok(tray_icon)
 }
 
 fn create_icon_image() -> tray_icon::Icon {
-    // Create a 32x32 RGBA icon (blue square)
-    let mut rgba = Vec::with_capacity(32 * 32 * 4);
-    for _y in 0..32 {
-        for _x in 0..32 {
+    // Create a 22x22 RGBA icon (blue square) - standard macOS menubar size
+    let size = 22;
+    let mut rgba = Vec::with_capacity(size * size * 4);
+    for _y in 0..size {
+        for _x in 0..size {
             rgba.push(0x41); // R
             rgba.push(0x69); // G
             rgba.push(0xE1); // B
@@ -152,11 +230,14 @@ fn create_icon_image() -> tray_icon::Icon {
         }
     }
 
-    tray_icon::Icon::from_rgba(rgba, 32, 32).expect("Failed to create icon")
+    tray_icon::Icon::from_rgba(rgba, size as u32, size as u32).expect("Failed to create icon")
 }
 
 fn create_menu(tray_icon: &TrayIcon) -> Result<MenuItems> {
     let menu = Menu::new();
+
+    // macOS REQUIRES all items to be in a Submenu, not directly in root Menu
+    let submenu = Submenu::new("Menu", true);
 
     // Status item - get current status from daemon
     let status_text = match get_status() {
@@ -171,52 +252,58 @@ fn create_menu(tray_icon: &TrayIcon) -> Result<MenuItems> {
     };
 
     let status_item = MenuItem::new(status_text, false, None);
-    menu.append(&status_item)?;
-    menu.append(&PredefinedMenuItem::separator())?;
+    submenu.append(&status_item)?;
+    submenu.append(&PredefinedMenuItem::separator())?;
 
     // Refresh status
     let refresh = MenuItem::new("Refresh Status", true, None);
     let refresh_id = refresh.id().clone();
-    menu.append(&refresh)?;
-    menu.append(&PredefinedMenuItem::separator())?;
+    submenu.append(&refresh)?;
+    submenu.append(&PredefinedMenuItem::separator())?;
 
     // Common issue shortcuts
     let proj_123 = MenuItem::new("Set: PROJ-123", true, None);
     let proj_123_id = proj_123.id().clone();
-    menu.append(&proj_123)?;
+    submenu.append(&proj_123)?;
 
     let proj_456 = MenuItem::new("Set: PROJ-456", true, None);
     let proj_456_id = proj_456.id().clone();
-    menu.append(&proj_456)?;
+    submenu.append(&proj_456)?;
 
     let proj_789 = MenuItem::new("Set: PROJ-789", true, None);
     let proj_789_id = proj_789.id().clone();
-    menu.append(&proj_789)?;
+    submenu.append(&proj_789)?;
 
-    menu.append(&PredefinedMenuItem::separator())?;
+    submenu.append(&PredefinedMenuItem::separator())?;
 
     // Clear override
     let clear = MenuItem::new("Clear Override", true, None);
     let clear_id = clear.id().clone();
-    menu.append(&clear)?;
+    submenu.append(&clear)?;
 
-    menu.append(&PredefinedMenuItem::separator())?;
+    submenu.append(&PredefinedMenuItem::separator())?;
 
     // Quit
     let quit = MenuItem::new("Quit", true, None);
     let quit_id = quit.id().clone();
-    menu.append(&quit)?;
+    submenu.append(&quit)?;
 
+    // Add submenu to root menu (macOS requirement)
+    menu.append(&submenu)?;
+
+    // Set menu WITHOUT cloning
     tray_icon.set_menu(Some(Box::new(menu)));
 
-    Ok(MenuItems {
+    let menu_items = MenuItems {
         proj_123: proj_123_id,
         proj_456: proj_456_id,
         proj_789: proj_789_id,
         clear: clear_id,
         refresh: refresh_id,
         quit: quit_id,
-    })
+    };
+
+    Ok(menu_items)
 }
 
 fn handle_menu_event(
