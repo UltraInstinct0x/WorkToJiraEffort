@@ -5,7 +5,7 @@ use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::Duration;
 use tray_icon::{
-    menu::{Menu, MenuEvent, MenuId, MenuItem, PredefinedMenuItem, Submenu},
+    menu::{Menu, MenuEvent, MenuId, MenuItem, PredefinedMenuItem},
     TrayIcon, TrayIconBuilder,
 };
 
@@ -101,7 +101,7 @@ fn main() -> Result<()> {
     // Handle menu events with NON-BLOCKING timeout to prevent freezing
     // AND pump the macOS event loop so the menubar icon appears
     loop {
-        // Process macOS events to make menubar icon visible AND responsive
+        // Process macOS events to make menubar icon visible
         #[cfg(target_os = "macos")]
         unsafe {
             use cocoa::base::id;
@@ -114,17 +114,17 @@ fn main() -> Result<()> {
             let run_loop_class = Class::get("NSRunLoop").unwrap();
             let run_loop: id = msg_send![run_loop_class, currentRunLoop];
 
-            // Create date 100ms in the future for smoother event processing
+            // Create date 10ms in the future
             let date_class = Class::get("NSDate").unwrap();
-            let date: id = msg_send![date_class, dateWithTimeIntervalSinceNow: 0.1f64];
+            let date: id = msg_send![date_class, dateWithTimeIntervalSinceNow: 0.01f64];
 
-            // Run the run loop in common modes to handle UI events
-            let mode: id = msg_send![Class::get("NSString").unwrap(), stringWithUTF8String: "kCFRunLoopCommonModes\0".as_ptr()];
+            // Run the run loop for a short time to process events
+            let mode: id = msg_send![Class::get("NSString").unwrap(), stringWithUTF8String: "kCFRunLoopDefaultMode\0".as_ptr()];
             let _: () = msg_send![run_loop, runMode:mode beforeDate:date];
         }
 
-        // Check for menu events with longer timeout to reduce CPU usage
-        match menu_channel.recv_timeout(Duration::from_millis(100)) {
+        // Check for menu events
+        match menu_channel.recv_timeout(Duration::from_millis(10)) {
             Ok(event) => {
                 println!("Menu event received: {:?}", event.id);
                 if let Err(e) = handle_menu_event(event, &state, &_tray_icon, &_menu_items) {
@@ -236,8 +236,8 @@ fn create_icon_image() -> tray_icon::Icon {
 fn create_menu(tray_icon: &TrayIcon) -> Result<MenuItems> {
     let menu = Menu::new();
 
-    // macOS REQUIRES all items to be in a Submenu, not directly in root Menu
-    let submenu = Submenu::new("Menu", true);
+    // For TRAY ICONS on macOS, add items directly to Menu (not Submenu)
+    // Submenu is only required for app menu bars, not tray icon context menus
 
     // Status item - get current status from daemon
     let status_text = match get_status() {
@@ -252,46 +252,43 @@ fn create_menu(tray_icon: &TrayIcon) -> Result<MenuItems> {
     };
 
     let status_item = MenuItem::new(status_text, false, None);
-    submenu.append(&status_item)?;
-    submenu.append(&PredefinedMenuItem::separator())?;
+    menu.append(&status_item)?;
+    menu.append(&PredefinedMenuItem::separator())?;
 
     // Refresh status
     let refresh = MenuItem::new("Refresh Status", true, None);
     let refresh_id = refresh.id().clone();
-    submenu.append(&refresh)?;
-    submenu.append(&PredefinedMenuItem::separator())?;
+    menu.append(&refresh)?;
+    menu.append(&PredefinedMenuItem::separator())?;
 
     // Common issue shortcuts
     let proj_123 = MenuItem::new("Set: PROJ-123", true, None);
     let proj_123_id = proj_123.id().clone();
-    submenu.append(&proj_123)?;
+    menu.append(&proj_123)?;
 
     let proj_456 = MenuItem::new("Set: PROJ-456", true, None);
     let proj_456_id = proj_456.id().clone();
-    submenu.append(&proj_456)?;
+    menu.append(&proj_456)?;
 
     let proj_789 = MenuItem::new("Set: PROJ-789", true, None);
     let proj_789_id = proj_789.id().clone();
-    submenu.append(&proj_789)?;
+    menu.append(&proj_789)?;
 
-    submenu.append(&PredefinedMenuItem::separator())?;
+    menu.append(&PredefinedMenuItem::separator())?;
 
     // Clear override
     let clear = MenuItem::new("Clear Override", true, None);
     let clear_id = clear.id().clone();
-    submenu.append(&clear)?;
+    menu.append(&clear)?;
 
-    submenu.append(&PredefinedMenuItem::separator())?;
+    menu.append(&PredefinedMenuItem::separator())?;
 
     // Quit
     let quit = MenuItem::new("Quit", true, None);
     let quit_id = quit.id().clone();
-    submenu.append(&quit)?;
+    menu.append(&quit)?;
 
-    // Add submenu to root menu (macOS requirement)
-    menu.append(&submenu)?;
-
-    // Set menu WITHOUT cloning
+    // Set menu on tray icon
     tray_icon.set_menu(Some(Box::new(menu)));
 
     let menu_items = MenuItems {
