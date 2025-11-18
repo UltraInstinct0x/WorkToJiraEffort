@@ -29,6 +29,16 @@ struct AppState {
     daemon_process: Option<Child>,
 }
 
+// Menu item IDs to track which item was clicked
+struct MenuIds {
+    refresh: MenuId,
+    proj_123: MenuId,
+    proj_456: MenuId,
+    proj_789: MenuId,
+    clear: MenuId,
+    quit: MenuId,
+}
+
 #[derive(Debug)]
 enum UserEvent {
     TrayIconEvent(TrayIconEvent),
@@ -97,7 +107,7 @@ fn main() -> Result<()> {
         .context("Failed to create tray icon")?;
 
     println!("Creating menu...");
-    let menu = create_menu()?;
+    let (menu, menu_ids) = create_menu()?;
 
     // Set menu on tray icon
     tray_icon.set_menu(Some(Box::new(menu)));
@@ -121,7 +131,7 @@ fn main() -> Result<()> {
             }
             Event::UserEvent(UserEvent::MenuEvent(event)) => {
                 println!("Menu event received: {:?}", event.id);
-                if let Err(e) = handle_menu_event(event, &state_clone, &tray_icon) {
+                if let Err(e) = handle_menu_event(event, &state_clone, &tray_icon, &menu_ids) {
                     log::error!("Error handling menu event: {}", e);
                 }
             }
@@ -201,7 +211,7 @@ fn create_icon_image() -> tray_icon::Icon {
     tray_icon::Icon::from_rgba(rgba, size as u32, size as u32).expect("Failed to create icon")
 }
 
-fn create_menu() -> Result<Menu> {
+fn create_menu() -> Result<(Menu, MenuIds)> {
     let menu = Menu::new();
 
     // Status item - get current status from daemon
@@ -222,36 +232,51 @@ fn create_menu() -> Result<Menu> {
 
     // Refresh status
     let refresh = MenuItem::new("Refresh Status", true, None);
+    let refresh_id = refresh.id().clone();
     menu.append(&refresh)?;
     menu.append(&PredefinedMenuItem::separator())?;
 
     // Common issue shortcuts
     let proj_123 = MenuItem::new("Set: PROJ-123", true, None);
+    let proj_123_id = proj_123.id().clone();
     menu.append(&proj_123)?;
 
     let proj_456 = MenuItem::new("Set: PROJ-456", true, None);
+    let proj_456_id = proj_456.id().clone();
     menu.append(&proj_456)?;
 
     let proj_789 = MenuItem::new("Set: PROJ-789", true, None);
+    let proj_789_id = proj_789.id().clone();
     menu.append(&proj_789)?;
 
     menu.append(&PredefinedMenuItem::separator())?;
 
     // Clear override
     let clear = MenuItem::new("Clear Override", true, None);
+    let clear_id = clear.id().clone();
     menu.append(&clear)?;
 
     menu.append(&PredefinedMenuItem::separator())?;
 
     // Quit
     let quit = MenuItem::new("Quit", true, None);
+    let quit_id = quit.id().clone();
     menu.append(&quit)?;
 
-    Ok(menu)
+    let menu_ids = MenuIds {
+        refresh: refresh_id,
+        proj_123: proj_123_id,
+        proj_456: proj_456_id,
+        proj_789: proj_789_id,
+        clear: clear_id,
+        quit: quit_id,
+    };
+
+    Ok((menu, menu_ids))
 }
 
 fn recreate_menu(tray_icon: &tray_icon::TrayIcon) -> Result<()> {
-    let new_menu = create_menu()?;
+    let (new_menu, _menu_ids) = create_menu()?;
     tray_icon.set_menu(Some(Box::new(new_menu)));
     Ok(())
 }
@@ -260,62 +285,67 @@ fn handle_menu_event(
     event: MenuEvent,
     state: &Arc<Mutex<AppState>>,
     tray_icon: &tray_icon::TrayIcon,
+    menu_ids: &MenuIds,
 ) -> Result<()> {
-    // Get menu text to identify which action to take
-    // We need to recreate the menu to get the items and compare IDs
-    let menu = create_menu()?;
-    let items = menu.items();
+    let event_id = event.id();
 
-    // Find the clicked item by ID
-    let clicked_item = items.iter().find(|item| {
-        if let Some(menu_item) = item.as_menuitem() {
-            menu_item.id() == event.id()
-        } else {
-            false
-        }
-    });
-
-    if let Some(item) = clicked_item {
-        if let Some(menu_item) = item.as_menuitem() {
-            let text = menu_item.text();
-
-            if text.starts_with("Set: ") {
-                let issue = text.strip_prefix("Set: ").unwrap().to_string();
-                println!("Setting issue override to: {}", issue);
-                match set_issue_override(Some(issue.clone())) {
-                    Ok(_) => {
-                        println!("Issue override set to: {}", issue);
-                        recreate_menu(tray_icon)?;
-                    }
-                    Err(e) => {
-                        log::error!("Failed to set issue override: {}", e);
-                    }
-                }
-            } else if text == "Clear Override" {
-                println!("Clearing issue override");
-                match set_issue_override(None) {
-                    Ok(_) => {
-                        println!("Issue override cleared");
-                        recreate_menu(tray_icon)?;
-                    }
-                    Err(e) => {
-                        log::error!("Failed to clear issue override: {}", e);
-                    }
-                }
-            } else if text == "Refresh Status" {
-                println!("Refreshing status...");
+    // Check which menu item was clicked using stored IDs
+    if event_id == &menu_ids.proj_123 {
+        println!("Setting issue override to: PROJ-123");
+        match set_issue_override(Some("PROJ-123".to_string())) {
+            Ok(_) => {
+                println!("Issue override set to: PROJ-123");
                 recreate_menu(tray_icon)?;
-            } else if text == "Quit" {
-                println!("Quitting...");
-                // Kill daemon if we started it
-                let mut state = state.lock().unwrap();
-                if let Some(mut child) = state.daemon_process.take() {
-                    let _ = child.kill();
-                    let _ = child.wait();
-                }
-                std::process::exit(0);
+            }
+            Err(e) => {
+                log::error!("Failed to set issue override: {}", e);
             }
         }
+    } else if event_id == &menu_ids.proj_456 {
+        println!("Setting issue override to: PROJ-456");
+        match set_issue_override(Some("PROJ-456".to_string())) {
+            Ok(_) => {
+                println!("Issue override set to: PROJ-456");
+                recreate_menu(tray_icon)?;
+            }
+            Err(e) => {
+                log::error!("Failed to set issue override: {}", e);
+            }
+        }
+    } else if event_id == &menu_ids.proj_789 {
+        println!("Setting issue override to: PROJ-789");
+        match set_issue_override(Some("PROJ-789".to_string())) {
+            Ok(_) => {
+                println!("Issue override set to: PROJ-789");
+                recreate_menu(tray_icon)?;
+            }
+            Err(e) => {
+                log::error!("Failed to set issue override: {}", e);
+            }
+        }
+    } else if event_id == &menu_ids.clear {
+        println!("Clearing issue override");
+        match set_issue_override(None) {
+            Ok(_) => {
+                println!("Issue override cleared");
+                recreate_menu(tray_icon)?;
+            }
+            Err(e) => {
+                log::error!("Failed to clear issue override: {}", e);
+            }
+        }
+    } else if event_id == &menu_ids.refresh {
+        println!("Refreshing status...");
+        recreate_menu(tray_icon)?;
+    } else if event_id == &menu_ids.quit {
+        println!("Quitting...");
+        // Kill daemon if we started it
+        let mut state = state.lock().unwrap();
+        if let Some(mut child) = state.daemon_process.take() {
+            let _ = child.kill();
+            let _ = child.wait();
+        }
+        std::process::exit(0);
     }
 
     Ok(())
