@@ -127,7 +127,17 @@ async fn main() -> Result<()> {
                 "Starting WorkToJiraEffort daemon on http://127.0.0.1:{}",
                 port
             );
-            run_daemon(port).await
+
+            // Get data directory for embedded Screenpipe
+            let data_dir = get_data_dir()?;
+
+            // Start embedded Screenpipe server
+            println!("Starting embedded Screenpipe server...");
+            let mut screenpipe = ScreenpipeManager::new();
+            screenpipe.start(data_dir, 3030).await?;
+            println!("Screenpipe server started successfully");
+
+            run_daemon(port, screenpipe).await
         }
     }
 }
