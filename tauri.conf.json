@@ -1,0 +1,62 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "WorkToJiraEffort",
+  "version": "0.1.0",
+  "identifier": "com.worktojiraeffort.app",
+  "build": {
+    "frontendDist": "ui",
+    "devUrl": "http://localhost:3000",
+    "beforeDevCommand": "",
+    "beforeBuildCommand": ""
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "WorkToJiraEffort",
+        "label": "main",
+        "width": 400,
+        "height": 600,
+        "resizable": false,
+        "fullscreen": false,
+        "decorations": true,
+        "alwaysOnTop": false,
+        "visible": false,
+        "center": true,
+        "skipTaskbar": false
+      }
+    ],
+    "security": {
+      "csp": null
+    },
+    "trayIcon": {
+      "id": "main",
+      "iconPath": "icons/icon.png",
+      "iconAsTemplate": true,
+      "menuOnLeftClick": false,
+      "tooltip": "WorkToJiraEffort - Time Tracker"
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "publisher": "WorkToJiraEffort Contributors",
+    "copyright": "Copyright (c) 2024 WorkToJiraEffort Contributors",
+    "category": "Productivity",
+    "shortDescription": "Automatic work time tracking",
+    "longDescription": "Automatically track work time via Screenpipe and log to Jira & Salesforce",
+    "macOS": {
+      "minimumSystemVersion": "10.13"
+    }
+  },
+  "plugins": {
+    "shell": {
+      "open": true
+    }
+  }
+}
