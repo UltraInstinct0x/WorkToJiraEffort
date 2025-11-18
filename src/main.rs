@@ -2,6 +2,7 @@ mod config;
 mod daemon;
 mod database;
 mod jira;
+mod llm;
 mod salesforce;
 mod screenpipe;
 mod screenpipe_manager;
