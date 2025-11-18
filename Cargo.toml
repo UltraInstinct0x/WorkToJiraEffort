@@ -59,12 +59,12 @@ image = { version = "0.25", optional = true }
 tao = { version = "0.30", optional = true }
 
 [target.'cfg(target_os = "macos")'.dependencies]
-cocoa = { version = "0.26", optional = true }
+cocoa = "0.26"
 objc = { version = "0.2", optional = true }
 
 [features]
 default = []
-tray = ["dep:tray-icon", "dep:image", "dep:tao", "dep:cocoa", "dep:objc"]
+tray = ["dep:tray-icon", "dep:image", "dep:tao", "dep:objc"]
 
 [target.'cfg(unix)'.dependencies]
 nix = { version = "0.29", features = ["signal"] }
