@@ -27,7 +27,6 @@ struct IssueRequest {
 
 struct AppState {
     daemon_process: Option<Child>,
-    tray_icon: Option<tray_icon::TrayIcon>,
 }
 
 #[derive(Debug)]
@@ -60,7 +59,6 @@ fn main() -> Result<()> {
 
     let state = Arc::new(Mutex::new(AppState {
         daemon_process: None,
-        tray_icon: None,
     }));
 
     // Start daemon in background thread
@@ -104,12 +102,6 @@ fn main() -> Result<()> {
     // Set menu on tray icon
     tray_icon.set_menu(Some(Box::new(menu)));
 
-    // Store tray icon in state
-    {
-        let mut state = state.lock().unwrap();
-        state.tray_icon = Some(tray_icon);
-    }
-
     println!("WorkToJiraEffort menubar app started!");
     println!("Daemon running on port {}", DAEMON_PORT);
     println!("Look for the blue icon in your menubar (top-right corner)");
@@ -129,7 +121,7 @@ fn main() -> Result<()> {
             }
             Event::UserEvent(UserEvent::MenuEvent(event)) => {
                 println!("Menu event received: {:?}", event.id);
-                if let Err(e) = handle_menu_event(event, &state_clone) {
+                if let Err(e) = handle_menu_event(event, &state_clone, &tray_icon) {
                     log::error!("Error handling menu event: {}", e);
                 }
             }
@@ -258,16 +250,17 @@ fn create_menu() -> Result<Menu> {
     Ok(menu)
 }
 
-fn recreate_menu(state: &Arc<Mutex<AppState>>) -> Result<()> {
+fn recreate_menu(tray_icon: &tray_icon::TrayIcon) -> Result<()> {
     let new_menu = create_menu()?;
-    let mut state = state.lock().unwrap();
-    if let Some(ref tray_icon) = state.tray_icon {
-        tray_icon.set_menu(Some(Box::new(new_menu)));
-    }
+    tray_icon.set_menu(Some(Box::new(new_menu)));
     Ok(())
 }
 
-fn handle_menu_event(event: MenuEvent, state: &Arc<Mutex<AppState>>) -> Result<()> {
+fn handle_menu_event(
+    event: MenuEvent,
+    state: &Arc<Mutex<AppState>>,
+    tray_icon: &tray_icon::TrayIcon,
+) -> Result<()> {
     // Get menu text to identify which action to take
     // We need to recreate the menu to get the items and compare IDs
     let menu = create_menu()?;
@@ -292,7 +285,7 @@ fn handle_menu_event(event: MenuEvent, state: &Arc<Mutex<AppState>>) -> Result<(
                 match set_issue_override(Some(issue.clone())) {
                     Ok(_) => {
                         println!("Issue override set to: {}", issue);
-                        recreate_menu(state)?;
+                        recreate_menu(tray_icon)?;
                     }
                     Err(e) => {
                         log::error!("Failed to set issue override: {}", e);
@@ -303,7 +296,7 @@ fn handle_menu_event(event: MenuEvent, state: &Arc<Mutex<AppState>>) -> Result<(
                 match set_issue_override(None) {
                     Ok(_) => {
                         println!("Issue override cleared");
-                        recreate_menu(state)?;
+                        recreate_menu(tray_icon)?;
                     }
                     Err(e) => {
                         log::error!("Failed to clear issue override: {}", e);
@@ -311,7 +304,7 @@ fn handle_menu_event(event: MenuEvent, state: &Arc<Mutex<AppState>>) -> Result<(
                 }
             } else if text == "Refresh Status" {
                 println!("Refreshing status...");
-                recreate_menu(state)?;
+                recreate_menu(tray_icon)?;
             } else if text == "Quit" {
                 println!("Quitting...");
                 // Kill daemon if we started it
