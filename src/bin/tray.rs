@@ -7,7 +7,7 @@ use std::time::Duration;
 use tao::event::{Event, StartCause};
 use tao::event_loop::{ControlFlow, EventLoopBuilder};
 use tray_icon::{
-    menu::{Menu, MenuEvent, MenuItem, MenuId, PredefinedMenuItem},
+    menu::{Menu, MenuEvent, MenuId, MenuItem, PredefinedMenuItem},
     TrayIconBuilder, TrayIconEvent,
 };
 
@@ -108,6 +108,7 @@ fn main() -> Result<()> {
 
     println!("Creating menu...");
     let (menu, menu_ids) = create_menu()?;
+    let menu_ids = Arc::new(Mutex::new(menu_ids));
 
     // Set menu on tray icon
     tray_icon.set_menu(Some(Box::new(menu)));
@@ -153,6 +154,19 @@ fn start_daemon(state: &Arc<Mutex<AppState>>) -> Result<()> {
     let exe_path = std::env::current_exe()?;
     let daemon_exe = exe_path.parent().unwrap().join("work-to-jira-effort");
 
+    #[cfg(target_os = "macos")]
+    let child = {
+        use std::os::unix::process::CommandExt;
+        Command::new(daemon_exe)
+            .args(["daemon", "--port", &DAEMON_PORT.to_string()])
+            .env("RUST_LOG", "info")
+            .env("WORK_TO_JIRA_NO_DOCK", "1") // Signal to daemon to not show in dock
+            .process_group(0) // Create new process group
+            .spawn()
+            .context("Failed to start daemon process")?
+    };
+
+    #[cfg(not(target_os = "macos"))]
     let child = Command::new(daemon_exe)
         .args(["daemon", "--port", &DAEMON_PORT.to_string()])
         .env("RUST_LOG", "info")
@@ -275,9 +289,14 @@ fn create_menu() -> Result<(Menu, MenuIds)> {
     Ok((menu, menu_ids))
 }
 
-fn recreate_menu(tray_icon: &tray_icon::TrayIcon) -> Result<()> {
-    let (new_menu, _menu_ids) = create_menu()?;
+fn recreate_menu(tray_icon: &tray_icon::TrayIcon, menu_ids: &Arc<Mutex<MenuIds>>) -> Result<()> {
+    let (new_menu, new_menu_ids) = create_menu()?;
     tray_icon.set_menu(Some(Box::new(new_menu)));
+
+    // Update stored menu IDs
+    let mut ids = menu_ids.lock().unwrap();
+    *ids = new_menu_ids;
+
     Ok(())
 }
 
@@ -285,59 +304,68 @@ fn handle_menu_event(
     event: MenuEvent,
     state: &Arc<Mutex<AppState>>,
     tray_icon: &tray_icon::TrayIcon,
-    menu_ids: &MenuIds,
+    menu_ids: &Arc<Mutex<MenuIds>>,
 ) -> Result<()> {
     let event_id = event.id();
 
+    // Lock menu_ids to compare
+    let ids = menu_ids.lock().unwrap();
+
     // Check which menu item was clicked using stored IDs
-    if event_id == &menu_ids.proj_123 {
+    if event_id == &ids.proj_123 {
+        drop(ids); // Release lock before API calls
         println!("Setting issue override to: PROJ-123");
         match set_issue_override(Some("PROJ-123".to_string())) {
             Ok(_) => {
                 println!("Issue override set to: PROJ-123");
-                recreate_menu(tray_icon)?;
+                recreate_menu(tray_icon, menu_ids)?;
             }
             Err(e) => {
                 log::error!("Failed to set issue override: {}", e);
             }
         }
-    } else if event_id == &menu_ids.proj_456 {
+    } else if event_id == &ids.proj_456 {
+        drop(ids);
         println!("Setting issue override to: PROJ-456");
         match set_issue_override(Some("PROJ-456".to_string())) {
             Ok(_) => {
                 println!("Issue override set to: PROJ-456");
-                recreate_menu(tray_icon)?;
+                recreate_menu(tray_icon, menu_ids)?;
             }
             Err(e) => {
                 log::error!("Failed to set issue override: {}", e);
             }
         }
-    } else if event_id == &menu_ids.proj_789 {
+    } else if event_id == &ids.proj_789 {
+        drop(ids);
         println!("Setting issue override to: PROJ-789");
         match set_issue_override(Some("PROJ-789".to_string())) {
             Ok(_) => {
                 println!("Issue override set to: PROJ-789");
-                recreate_menu(tray_icon)?;
+                recreate_menu(tray_icon, menu_ids)?;
             }
             Err(e) => {
                 log::error!("Failed to set issue override: {}", e);
             }
         }
-    } else if event_id == &menu_ids.clear {
+    } else if event_id == &ids.clear {
+        drop(ids);
         println!("Clearing issue override");
         match set_issue_override(None) {
             Ok(_) => {
                 println!("Issue override cleared");
-                recreate_menu(tray_icon)?;
+                recreate_menu(tray_icon, menu_ids)?;
             }
             Err(e) => {
                 log::error!("Failed to clear issue override: {}", e);
             }
         }
-    } else if event_id == &menu_ids.refresh {
+    } else if event_id == &ids.refresh {
+        drop(ids);
         println!("Refreshing status...");
-        recreate_menu(tray_icon)?;
-    } else if event_id == &menu_ids.quit {
+        recreate_menu(tray_icon, menu_ids)?;
+    } else if event_id == &ids.quit {
+        drop(ids);
         println!("Quitting...");
         // Kill daemon if we started it
         let mut state = state.lock().unwrap();
