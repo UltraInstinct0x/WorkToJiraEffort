@@ -1,9 +1,11 @@
 mod config;
 mod daemon;
+mod database;
 mod jira;
 mod salesforce;
 mod screenpipe;
 mod screenpipe_manager;
+mod state;
 mod tracker;
 
 use anyhow::Result;
@@ -84,7 +86,7 @@ async fn main() -> Result<()> {
         Commands::Start => {
             println!("Starting work time tracker with embedded Screenpipe...");
             let config = Config::load()?;
-            let interval = config.tracking.poll_interval_secs;
+            let interval = config.tracking.screenpipe_poll_interval_secs;
 
             // Get data directory for embedded Screenpipe
             let data_dir = get_data_dir()?;

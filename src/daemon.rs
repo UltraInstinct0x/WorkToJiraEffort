@@ -36,7 +36,7 @@ pub async fn run_daemon(port: u16) -> Result<()> {
     {
         let tracker_issue_override = Arc::clone(&issue_override);
         let mut tracker = WorkTracker::new(config.clone(), tracker_issue_override);
-        let interval = config.tracking.poll_interval_secs;
+        let interval = config.tracking.screenpipe_poll_interval_secs;
 
         tokio::spawn(async move {
             if let Err(err) = tracker.run(interval).await {

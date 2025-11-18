@@ -52,6 +52,10 @@ regex = "1.12"
 which = "6.0"
 dirs = "5.0"
 axum = { version = "0.7", features = ["macros"] }
+# Database for local activity storage
+rusqlite = { version = "0.32", features = ["bundled", "chrono"] }
+# Notifications for nudging system
+notify-rust = "4.11"
 
 # System tray / menubar app dependencies (optional - requires GUI libs)
 tray-icon = { version = "0.18", optional = true }
@@ -77,3 +81,6 @@ path = "src/main.rs"
 name = "work-to-jira-effort-tray"
 path = "src/bin/tray.rs"
 required-features = ["tray"]
+
+[dev-dependencies]
+tempfile = "3.12"
