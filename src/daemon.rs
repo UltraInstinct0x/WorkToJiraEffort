@@ -1,4 +1,4 @@
-use crate::{config::Config, tracker::WorkTracker};
+use crate::{config::Config, screenpipe_manager::ScreenpipeManager, tracker::WorkTracker};
 use anyhow::{Context, Result};
 use axum::{
     extract::State,
@@ -12,7 +12,7 @@ use tokio::{net::TcpListener, signal, sync::RwLock};
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 /// Run the long-lived daemon that can be controlled by external clients (e.g., menubar app)
-pub async fn run_daemon(port: u16) -> Result<()> {
+pub async fn run_daemon(port: u16, mut screenpipe: ScreenpipeManager) -> Result<()> {
     // On macOS, if launched from tray app, don't show in dock
     #[cfg(target_os = "macos")]
     if std::env::var("WORK_TO_JIRA_NO_DOCK").is_ok() {
@@ -62,6 +62,10 @@ pub async fn run_daemon(port: u16) -> Result<()> {
         .with_graceful_shutdown(shutdown_signal())
         .await
         .context("Daemon HTTP server error")?;
+
+    // Stop Screenpipe server when daemon shuts down
+    log::info!("Daemon shutting down, stopping Screenpipe...");
+    screenpipe.stop().await?;
 
     Ok(())
 }
