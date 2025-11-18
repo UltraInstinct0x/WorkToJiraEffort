@@ -1,9 +1,12 @@
 mod config;
 mod daemon;
+mod database;
 mod jira;
+mod llm;
 mod salesforce;
 mod screenpipe;
 mod screenpipe_manager;
+mod state;
 mod tracker;
 
 use anyhow::Result;
@@ -72,7 +75,7 @@ async fn main() -> Result<()> {
             screenpipe.start(data_dir, 3030).await?;
 
             println!("\nChecking service connectivity...");
-            let mut tracker = WorkTracker::new(config, Arc::new(RwLock::new(None)));
+            let mut tracker = WorkTracker::new(config, Arc::new(RwLock::new(None)))?;
             tracker.check_health().await?;
 
             // Stop Screenpipe server
@@ -84,7 +87,7 @@ async fn main() -> Result<()> {
         Commands::Start => {
             println!("Starting work time tracker with embedded Screenpipe...");
             let config = Config::load()?;
-            let interval = config.tracking.poll_interval_secs;
+            let interval = config.tracking.screenpipe_poll_interval_secs;
 
             // Get data directory for embedded Screenpipe
             let data_dir = get_data_dir()?;
@@ -94,7 +97,7 @@ async fn main() -> Result<()> {
             let mut screenpipe = ScreenpipeManager::new();
             screenpipe.start(data_dir, 3030).await?;
 
-            let mut tracker = WorkTracker::new(config, Arc::new(RwLock::new(None)));
+            let mut tracker = WorkTracker::new(config, Arc::new(RwLock::new(None)))?;
 
             println!("Checking service health before starting...");
             tracker.check_health().await?;
