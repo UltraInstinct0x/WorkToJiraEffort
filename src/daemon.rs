@@ -35,12 +35,20 @@ pub async fn run_daemon(port: u16) -> Result<()> {
     // Start tracker loop in the background
     {
         let tracker_issue_override = Arc::clone(&issue_override);
-        let mut tracker = WorkTracker::new(config.clone(), tracker_issue_override);
-        let interval = config.tracking.screenpipe_poll_interval_secs;
+        let config_clone = config.clone();
 
         tokio::spawn(async move {
-            if let Err(err) = tracker.run(interval).await {
-                log::error!("Tracker daemon exited with error: {}", err);
+            let interval = config_clone.tracking.screenpipe_poll_interval_secs;
+
+            match WorkTracker::new(config_clone, tracker_issue_override) {
+                Ok(mut tracker) => {
+                    if let Err(err) = tracker.run(interval).await {
+                        log::error!("Tracker daemon exited with error: {}", err);
+                    }
+                }
+                Err(err) => {
+                    log::error!("Failed to create tracker: {}", err);
+                }
             }
         });
     }

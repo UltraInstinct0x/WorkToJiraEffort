@@ -75,7 +75,7 @@ async fn main() -> Result<()> {
             screenpipe.start(data_dir, 3030).await?;
 
             println!("\nChecking service connectivity...");
-            let mut tracker = WorkTracker::new(config, Arc::new(RwLock::new(None)));
+            let mut tracker = WorkTracker::new(config, Arc::new(RwLock::new(None)))?;
             tracker.check_health().await?;
 
             // Stop Screenpipe server
@@ -97,7 +97,7 @@ async fn main() -> Result<()> {
             let mut screenpipe = ScreenpipeManager::new();
             screenpipe.start(data_dir, 3030).await?;
 
-            let mut tracker = WorkTracker::new(config, Arc::new(RwLock::new(None)));
+            let mut tracker = WorkTracker::new(config, Arc::new(RwLock::new(None)))?;
 
             println!("Checking service health before starting...");
             tracker.check_health().await?;
