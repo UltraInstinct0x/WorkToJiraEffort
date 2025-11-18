@@ -13,6 +13,22 @@ const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 /// Run the long-lived daemon that can be controlled by external clients (e.g., menubar app)
 pub async fn run_daemon(port: u16) -> Result<()> {
+    // On macOS, if launched from tray app, don't show in dock
+    #[cfg(target_os = "macos")]
+    if std::env::var("WORK_TO_JIRA_NO_DOCK").is_ok() {
+        unsafe {
+            use cocoa::appkit::{NSApp, NSApplication, NSApplicationActivationPolicy};
+            use cocoa::base::nil;
+
+            let app = NSApp();
+            if app != nil {
+                app.setActivationPolicy_(
+                    NSApplicationActivationPolicy::NSApplicationActivationPolicyAccessory,
+                );
+            }
+        }
+    }
+
     let config = Config::load().context("Failed to load configuration")?;
     let issue_override = Arc::new(RwLock::new(None));
 

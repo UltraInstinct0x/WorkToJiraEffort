@@ -21,6 +21,8 @@ WorkToJiraEffort is a cross-platform (Linux, Windows, macOS) application written
 - 🔒 **Secure**: API credentials stored in local configuration file
 - 🖥️ **Cross-Platform**: Works on Linux, Windows, and macOS
 - 🚀 **Zero Setup**: Screenpipe is automatically installed and managed - no external dependencies!
+- 🎛️ **Menubar/System Tray App**: Optional GUI for easy control and issue override management
+- 🔌 **Daemon Mode**: Run as a background service with HTTP API for external control
 
 ## Prerequisites
 
@@ -140,6 +142,62 @@ RUST_LOG=info work-to-jira-effort start
 
 Available log levels: `error`, `warn`, `info`, `debug`, `trace`
 
+### Run as Daemon (Background Service)
+
+For continuous background operation with external control:
+
+```bash
+work-to-jira-effort daemon --port 8787
+```
+
+The daemon provides:
+- **Background tracking**: Runs continuously without user interaction
+- **HTTP API**: Control API on `http://127.0.0.1:8787`
+  - `GET /status` - Get current status and issue override
+  - `POST /issue` - Set or clear Jira issue override
+- **External control**: Can be controlled by menubar apps or custom scripts
+
+Example API usage:
+```bash
+# Get current status
+curl http://127.0.0.1:8787/status
+
+# Set issue override
+curl -X POST http://127.0.0.1:8787/issue \
+  -H 'Content-Type: application/json' \
+  -d '{"issue_key": "PROJ-123"}'
+
+# Clear override
+curl -X POST http://127.0.0.1:8787/issue \
+  -H 'Content-Type: application/json' \
+  -d '{"issue_key": null}'
+```
+
+### Menubar/System Tray Application
+
+For a user-friendly GUI experience, use the menubar/system tray application:
+
+```bash
+# Build with tray support (requires GUI libraries)
+cargo build --release --features tray
+
+# Run the tray app
+./target/release/work-to-jira-effort-tray
+```
+
+The tray app provides:
+- **Auto-start daemon**: Automatically launches the background daemon
+- **Visual status**: See current issue override at a glance
+- **Quick actions**: Set/clear issue overrides with one click
+- **Common issues**: Shortcuts for frequently used Jira issues
+
+For detailed platform-specific build instructions, see [MENUBAR_BUILD.md](MENUBAR_BUILD.md).
+
+**Platform requirements:**
+- **macOS**: No additional dependencies
+- **Windows**: No additional dependencies
+- **Linux**: Requires GTK3 and related libraries (see [MENUBAR_BUILD.md](MENUBAR_BUILD.md))
+
 ## How It Works
 
 ### Activity Detection
@@ -171,10 +229,13 @@ The application is structured into several modules:
 
 - **config**: Configuration management and persistence
 - **screenpipe**: Screenpipe API client for activity retrieval
+- **screenpipe_manager**: Embedded Screenpipe installation and lifecycle management
 - **jira**: Jira API client for worklog creation
 - **salesforce**: Salesforce API client for time entry creation
-- **tracker**: Core tracking logic and activity consolidation
+- **tracker**: Core tracking logic and activity consolidation with issue override support
+- **daemon**: HTTP API server for external control (daemon mode)
 - **main**: CLI interface and command handling
+- **bin/tray**: System tray/menubar application (optional, requires `tray` feature)
 
 ## Security Considerations
 

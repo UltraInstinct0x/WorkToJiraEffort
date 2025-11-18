@@ -91,6 +91,16 @@ impl WorkTracker {
         let consolidated = self.consolidate_activities(&activities);
         log::info!("Consolidated into {} entries", consolidated.len());
 
+        // Show what was tracked
+        for activity in &consolidated {
+            log::info!(
+                "  📱 {} - {} ({} mins)",
+                activity.app_name,
+                activity.window_title,
+                activity.duration_secs / 60
+            );
+        }
+
         // Log to Jira
         if let Some(jira) = &self.jira {
             let issue_override = {
@@ -117,9 +127,25 @@ impl WorkTracker {
                             Ok(_) => log::info!("Successfully logged to Jira: {}", issue_key),
                             Err(e) => log::error!("Failed to log to Jira: {}", e),
                         }
+                    } else {
+                        log::warn!(
+                            "  ⚠️  Skipped (no Jira issue found): {} - {} ({} mins)",
+                            activity.app_name,
+                            activity.window_title,
+                            activity.duration_secs / 60
+                        );
                     }
+                } else {
+                    log::debug!(
+                        "  ⏭️  Skipped (too short): {} - {} ({} secs)",
+                        activity.app_name,
+                        activity.window_title,
+                        activity.duration_secs
+                    );
                 }
             }
+        } else {
+            log::warn!("⚠️  Jira not configured - activities tracked but not logged anywhere");
         }
 
         // Log to Salesforce
