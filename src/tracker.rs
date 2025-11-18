@@ -19,7 +19,7 @@ pub struct WorkTracker {
     salesforce: Option<SalesforceClient>,
     llm_analyzer: Option<LLMAnalyzer>,
     database: Database,
-    state_manager: Arc<RwLock<StateManager>>,
+    pub state_manager: Arc<RwLock<StateManager>>,
     last_sync: DateTime<Utc>,
     last_llm_analysis: DateTime<Utc>,
     issue_override: Arc<RwLock<Option<String>>>,

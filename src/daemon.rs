@@ -1,7 +1,8 @@
-use crate::{config::Config, tracker::WorkTracker};
+use crate::{config::Config, state::TrackingState, tracker::WorkTracker};
 use anyhow::{Context, Result};
 use axum::{
     extract::State,
+    http::StatusCode,
     routing::{get, post},
     Json, Router,
 };
@@ -32,32 +33,68 @@ pub async fn run_daemon(port: u16) -> Result<()> {
     let config = Config::load().context("Failed to load configuration")?;
     let issue_override = Arc::new(RwLock::new(None));
 
-    // Start tracker loop in the background
+    // Create tracker
+    let tracker = WorkTracker::new(config.clone(), Arc::clone(&issue_override))?;
+    let tracker = Arc::new(RwLock::new(tracker));
+
+    // Start sync loop in the background
     {
-        let tracker_issue_override = Arc::clone(&issue_override);
-        let config_clone = config.clone();
+        let tracker_clone = Arc::clone(&tracker);
+        let interval = config.tracking.screenpipe_poll_interval_secs;
 
         tokio::spawn(async move {
-            let interval = config_clone.tracking.screenpipe_poll_interval_secs;
-
-            match WorkTracker::new(config_clone, tracker_issue_override) {
-                Ok(mut tracker) => {
-                    if let Err(err) = tracker.run(interval).await {
-                        log::error!("Tracker daemon exited with error: {}", err);
+            loop {
+                {
+                    let mut tracker = tracker_clone.write().await;
+                    if let Err(err) = tracker.sync().await {
+                        log::error!("Sync failed: {:#}", err);
                     }
                 }
-                Err(err) => {
-                    log::error!("Failed to create tracker: {}", err);
+
+                tokio::time::sleep(tokio::time::Duration::from_secs(interval)).await;
+            }
+        });
+    }
+
+    // Start LLM analysis loop in the background
+    {
+        let tracker_clone = Arc::clone(&tracker);
+        let llm_interval = config.tracking.llm_batch_interval_secs;
+
+        tokio::spawn(async move {
+            loop {
+                tokio::time::sleep(tokio::time::Duration::from_secs(llm_interval)).await;
+
+                let mut tracker = tracker_clone.write().await;
+
+                // Get current session if tracking
+                let session_id = {
+                    let state_manager = tracker.state_manager.read().await;
+                    state_manager.current_session().map(|s| s.id)
+                };
+
+                if let Some(session_id) = session_id {
+                    log::info!("Running scheduled LLM analysis");
+                    if let Err(err) = tracker.analyze_and_log_batch(session_id).await {
+                        log::error!("Scheduled LLM analysis failed: {:#}", err);
+                    }
                 }
             }
         });
     }
 
-    let state = Arc::new(DaemonState { issue_override });
+    let state = Arc::new(DaemonState {
+        tracker,
+        issue_override,
+    });
 
     let app = Router::new()
         .route("/status", get(status_handler))
         .route("/issue", post(issue_override_handler))
+        .route("/start", post(start_tracking_handler))
+        .route("/pause", post(pause_tracking_handler))
+        .route("/resume", post(resume_tracking_handler))
+        .route("/stop", post(stop_tracking_handler))
         .with_state(state);
 
     let addr = SocketAddr::from(([127, 0, 0, 1], port));
@@ -76,19 +113,36 @@ pub async fn run_daemon(port: u16) -> Result<()> {
 
 #[derive(Clone)]
 struct DaemonState {
+    tracker: Arc<RwLock<WorkTracker>>,
     issue_override: Arc<RwLock<Option<String>>>,
 }
 
 #[derive(Serialize)]
 struct StatusResponse {
     version: &'static str,
+    tracking_state: String,
+    session_duration_secs: Option<u64>,
+    break_duration_secs: Option<u64>,
     issue_override: Option<String>,
 }
 
 async fn status_handler(State(state): State<Arc<DaemonState>>) -> Json<StatusResponse> {
+    let tracker = state.tracker.read().await;
+    let state_manager = tracker.state_manager.read().await;
+
+    let tracking_state = state_manager.current_state();
+    let session_duration = state_manager.current_session().map(|s| s.duration_secs());
+    let break_duration = state_manager.current_break().map(|b| b.duration_secs());
+    drop(state_manager);
+    drop(tracker);
+
     let issue_override = state.issue_override.read().await.clone();
+
     Json(StatusResponse {
         version: VERSION,
+        tracking_state: tracking_state.as_str().to_string(),
+        session_duration_secs: session_duration,
+        break_duration_secs: break_duration,
         issue_override,
     })
 }
@@ -117,6 +171,102 @@ async fn issue_override_handler(
     }
 
     status_handler(State(state)).await
+}
+
+#[derive(Serialize)]
+struct ActionResponse {
+    success: bool,
+    message: String,
+    #[serde(flatten)]
+    status: StatusResponse,
+}
+
+async fn start_tracking_handler(
+    State(state): State<Arc<DaemonState>>,
+) -> Result<Json<ActionResponse>, (StatusCode, String)> {
+    let mut tracker = state.tracker.write().await;
+
+    match tracker.start_tracking().await {
+        Ok(_) => {
+            drop(tracker);
+            let status = status_handler(State(state.clone())).await.0;
+            Ok(Json(ActionResponse {
+                success: true,
+                message: "Tracking started".to_string(),
+                status,
+            }))
+        }
+        Err(e) => Err((
+            StatusCode::BAD_REQUEST,
+            format!("Failed to start tracking: {}", e),
+        )),
+    }
+}
+
+async fn pause_tracking_handler(
+    State(state): State<Arc<DaemonState>>,
+) -> Result<Json<ActionResponse>, (StatusCode, String)> {
+    let mut tracker = state.tracker.write().await;
+
+    match tracker.pause_tracking().await {
+        Ok(_) => {
+            drop(tracker);
+            let status = status_handler(State(state.clone())).await.0;
+            Ok(Json(ActionResponse {
+                success: true,
+                message: "Tracking paused".to_string(),
+                status,
+            }))
+        }
+        Err(e) => Err((
+            StatusCode::BAD_REQUEST,
+            format!("Failed to pause tracking: {}", e),
+        )),
+    }
+}
+
+async fn resume_tracking_handler(
+    State(state): State<Arc<DaemonState>>,
+) -> Result<Json<ActionResponse>, (StatusCode, String)> {
+    let mut tracker = state.tracker.write().await;
+
+    match tracker.resume_tracking().await {
+        Ok(_) => {
+            drop(tracker);
+            let status = status_handler(State(state.clone())).await.0;
+            Ok(Json(ActionResponse {
+                success: true,
+                message: "Tracking resumed".to_string(),
+                status,
+            }))
+        }
+        Err(e) => Err((
+            StatusCode::BAD_REQUEST,
+            format!("Failed to resume tracking: {}", e),
+        )),
+    }
+}
+
+async fn stop_tracking_handler(
+    State(state): State<Arc<DaemonState>>,
+) -> Result<Json<ActionResponse>, (StatusCode, String)> {
+    let mut tracker = state.tracker.write().await;
+
+    match tracker.stop_tracking().await {
+        Ok(_) => {
+            drop(tracker);
+            let status = status_handler(State(state.clone())).await.0;
+            Ok(Json(ActionResponse {
+                success: true,
+                message: "Tracking stopped and logged".to_string(),
+                status,
+            }))
+        }
+        Err(e) => Err((
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("Failed to stop tracking: {}", e),
+        )),
+    }
 }
 
 async fn shutdown_signal() {
