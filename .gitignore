@@ -16,3 +16,6 @@ Thumbs.db
 # Configuration (contains credentials)
 config.toml
 
+# Tauri generated files
+gen/
+
