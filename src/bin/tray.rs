@@ -31,6 +31,7 @@ struct AppState {
 
 // Menu item IDs to track which item was clicked
 struct MenuIds {
+    dashboard: MenuId,
     refresh: MenuId,
     proj_123: MenuId,
     proj_456: MenuId,
@@ -244,6 +245,12 @@ fn create_menu() -> Result<(Menu, MenuIds)> {
     menu.append(&status_item)?;
     menu.append(&PredefinedMenuItem::separator())?;
 
+    // Open Dashboard
+    let dashboard = MenuItem::new("Open Dashboard", true, None);
+    let dashboard_id = dashboard.id().clone();
+    menu.append(&dashboard)?;
+    menu.append(&PredefinedMenuItem::separator())?;
+
     // Refresh status
     let refresh = MenuItem::new("Refresh Status", true, None);
     let refresh_id = refresh.id().clone();
@@ -278,6 +285,7 @@ fn create_menu() -> Result<(Menu, MenuIds)> {
     menu.append(&quit)?;
 
     let menu_ids = MenuIds {
+        dashboard: dashboard_id,
         refresh: refresh_id,
         proj_123: proj_123_id,
         proj_456: proj_456_id,
@@ -312,7 +320,13 @@ fn handle_menu_event(
     let ids = menu_ids.lock().unwrap();
 
     // Check which menu item was clicked using stored IDs
-    if event_id == &ids.proj_123 {
+    if event_id == &ids.dashboard {
+        drop(ids);
+        println!("Opening dashboard...");
+        if let Err(e) = open_dashboard() {
+            log::error!("Failed to open dashboard: {}", e);
+        }
+    } else if event_id == &ids.proj_123 {
         drop(ids); // Release lock before API calls
         println!("Setting issue override to: PROJ-123");
         match set_issue_override(Some("PROJ-123".to_string())) {
@@ -375,6 +389,19 @@ fn handle_menu_event(
         }
         std::process::exit(0);
     }
+
+    Ok(())
+}
+
+fn open_dashboard() -> Result<()> {
+    let exe_path = std::env::current_exe()?;
+    let dashboard_exe = exe_path.parent().unwrap().join("work-to-jira-effort-ui");
+
+    println!("Launching dashboard from: {:?}", dashboard_exe);
+
+    Command::new(dashboard_exe)
+        .spawn()
+        .context("Failed to start dashboard process")?;
 
     Ok(())
 }
