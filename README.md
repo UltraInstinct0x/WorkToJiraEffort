@@ -187,24 +187,27 @@ cargo build --release --bin work-to-jira-effort-ui --features tauri-ui
 
 #### UI Features
 
-The Tauri app provides a polished interface with:
+The Tauri app provides a dual-window architecture inspired by TimeScribe's menubar design:
+
+**🎯 Menubar Popup (Left-Click Tray Icon)**
+- **Compact Interface**: 350x450px quick-access popup positioned near tray icon
+- **Status at a Glance**: Current tracking status, active issue, and today's time
+- **Quick Actions**: Set/clear issue override with single input field
+- **Dashboard Access**: "Open Dashboard" button for detailed view
+- **Auto-Hide**: Closes when clicking outside or switching focus
+
+**📊 Full Dashboard (Right-Click → Open Dashboard)**
+- **Status Overview**: Real-time tracking status and current issue
+- **Recent Issues**: Quick-access list of recently tracked issues with time totals
+- **Time Summary**: Daily breakdown by issue with visual progress bars
+- **Settings & Preferences**: Issue override, notification controls, theme toggle
+- **Connection Health**: Live daemon status with pulsing indicator
 
 **🎨 Modern Design**
 - TimeScribe-inspired warm terracotta & sage green palette
 - Fraunces display font for elegant typography
 - Smooth animations and transitions
 - Dark/light mode support with system preference detection
-
-**📊 Dashboard Features**
-- **Status Overview**: Real-time tracking status and current issue
-- **Recent Issues**: Quick-access list of recently tracked issues
-- **Time Summary**: Daily breakdown by issue with visual progress bars
-- **Connection Health**: Live daemon status with pulsing indicator
-
-**⚙️ Settings & Preferences**
-- **Issue Override**: Manually set active Jira issue
-- **Notification Controls**: Enable/disable notifications with frequency options (immediate, hourly, daily)
-- **Theme Toggle**: Switch between light and dark modes
 
 **🔄 Real-time Updates**
 - Auto-refresh every 30 seconds
