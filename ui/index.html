@@ -7,84 +7,206 @@
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <div class="app-container">
+    <div class="app" data-theme="light">
         <!-- Header -->
         <header class="app-header">
-            <h1>WorkToJiraEffort</h1>
-            <p class="subtitle">Automatic Time Tracking</p>
+            <div class="header-content">
+                <h1 class="header-title">WorkToJiraEffort</h1>
+                <p class="header-subtitle">AI-Powered Time Tracking</p>
+            </div>
+            <button class="theme-toggle" id="themeToggle" aria-label="Toggle dark mode">
+                <svg class="theme-toggle__icon theme-toggle__icon--sun" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="5"></circle>
+                    <line x1="12" y1="1" x2="12" y2="3"></line>
+                    <line x1="12" y1="21" x2="12" y2="23"></line>
+                    <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                    <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                    <line x1="1" y1="12" x2="3" y2="12"></line>
+                    <line x1="21" y1="12" x2="23" y2="12"></line>
+                    <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                    <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+                </svg>
+                <svg class="theme-toggle__icon theme-toggle__icon--moon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                </svg>
+            </button>
         </header>
 
         <!-- Main Content -->
         <main class="main-content">
-            <!-- Current Status Card -->
-            <div class="card status-card">
+            <!-- Status Dashboard -->
+            <section class="status-dashboard card">
                 <div class="card-header">
-                    <h2>Current Status</h2>
-                    <button class="btn-refresh" id="refreshBtn" title="Refresh">
-                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                            <path d="M13.5 3.5C12.25 2.25 10.5 1.5 8.5 1.5C4.75 1.5 1.75 4.5 1.75 8.25C1.75 12 4.75 15 8.5 15C11.5 15 14 12.75 14.5 9.75H13C12.5 11.75 10.75 13.25 8.5 13.25C5.75 13.25 3.5 11 3.5 8.25C3.5 5.5 5.75 3.25 8.5 3.25C9.75 3.25 11 3.75 11.75 4.75L9.5 7H14.5V2L13.5 3.5Z" fill="currentColor"/>
+                    <h2 class="card-title">Current Status</h2>
+                    <button class="btn-icon" id="refreshBtn" aria-label="Refresh status">
+                        <svg class="icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="23 4 23 10 17 10"></polyline>
+                            <polyline points="1 20 1 14 7 14"></polyline>
+                            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
                         </svg>
                     </button>
                 </div>
-                <div class="status-info">
-                    <div class="status-item">
-                        <span class="status-label">Current Issue:</span>
-                        <span class="status-value" id="currentIssue">-</span>
-                    </div>
-                    <div class="status-item">
-                        <span class="status-label">Status:</span>
-                        <span class="status-badge" id="trackingStatus">Not Tracking</span>
-                    </div>
-                    <div class="status-item">
-                        <span class="status-label">Today's Total:</span>
-                        <span class="status-value" id="totalTime">0h 0m</span>
-                    </div>
-                </div>
-            </div>
 
-            <!-- Issue Selection Card -->
-            <div class="card">
-                <div class="card-header">
-                    <h2>Set Active Issue</h2>
+                <div class="status-grid">
+                    <div class="status-item">
+                        <span class="status-label">Tracking</span>
+                        <span class="status-badge" id="trackingStatus">
+                            <svg class="icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="12" cy="12" r="10"></circle>
+                                <polyline points="12 6 12 12 16 14"></polyline>
+                            </svg>
+                            <span id="trackingStatusText">Not Active</span>
+                        </span>
+                    </div>
+
+                    <div class="status-item">
+                        <span class="status-label">Current Issue</span>
+                        <span class="status-value" id="currentIssue">Auto-detect</span>
+                    </div>
+
+                    <div class="status-item">
+                        <span class="status-label">Time Today</span>
+                        <span class="status-value status-value--time" id="totalTime">0h 0m</span>
+                    </div>
                 </div>
+            </section>
+
+            <!-- Issue Selector -->
+            <section class="issue-selector card">
+                <div class="card-header">
+                    <h2 class="card-title">Active Issue</h2>
+                </div>
+
                 <div class="issue-input-group">
                     <input
                         type="text"
                         id="issueInput"
-                        class="issue-input"
+                        class="input"
                         placeholder="e.g., PROJ-123"
                         maxlength="50"
+                        aria-label="Issue key"
                     />
-                    <button class="btn btn-primary" id="setIssueBtn">Set</button>
+                    <button class="btn btn--primary" id="setIssueBtn">Set</button>
                 </div>
 
-                <!-- Quick Actions -->
-                <div class="quick-actions">
-                    <p class="quick-actions-label">Quick Select:</p>
-                    <div class="quick-actions-buttons">
-                        <button class="btn btn-secondary btn-sm" data-issue="PROJ-123">PROJ-123</button>
-                        <button class="btn btn-secondary btn-sm" data-issue="PROJ-456">PROJ-456</button>
-                        <button class="btn btn-secondary btn-sm" data-issue="PROJ-789">PROJ-789</button>
+                <button class="btn btn--ghost btn--sm" id="clearIssueBtn">
+                    <svg class="icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                    Clear Override
+                </button>
+            </section>
+
+            <!-- Recent Issues -->
+            <section class="recent-issues card" id="recentIssuesSection">
+                <div class="card-header">
+                    <h2 class="card-title">Recent Issues</h2>
+                    <span class="badge" id="recentIssuesCount">0</span>
+                </div>
+
+                <div class="recent-issues__list" id="recentIssuesList">
+                    <!-- Populated by JavaScript -->
+                    <div class="empty-state">
+                        <svg class="empty-state__icon" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                            <path d="M12 2L2 7l10 5 10-5-10-5z"></path>
+                            <path d="M2 17l10 5 10-5"></path>
+                            <path d="M2 12l10 5 10-5"></path>
+                        </svg>
+                        <p class="empty-state__text">No recent issues yet</p>
                     </div>
                 </div>
+            </section>
 
-                <button class="btn btn-danger" id="clearIssueBtn">Clear Override</button>
-            </div>
+            <!-- Time Summary -->
+            <section class="time-summary card" id="timeSummarySection">
+                <div class="card-header">
+                    <h2 class="card-title">Today's Summary</h2>
+                </div>
+
+                <div class="time-summary__total">
+                    <span class="time-summary__label">Total Tracked</span>
+                    <span class="time-summary__value" id="summaryTotalTime">0h 0m</span>
+                </div>
+
+                <div class="time-summary__chart" id="timeSummaryChart">
+                    <!-- Populated by JavaScript -->
+                    <div class="empty-state empty-state--compact">
+                        <p class="empty-state__text">Start tracking to see your summary</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Notification Preferences -->
+            <section class="notification-prefs card" id="notificationPrefsSection">
+                <div class="card-header">
+                    <h2 class="card-title">Notifications</h2>
+                </div>
+
+                <div class="pref-toggle">
+                    <label class="pref-toggle__label">
+                        <input type="checkbox" class="pref-toggle__input" id="notificationsEnabled" checked>
+                        <span class="pref-toggle__slider"></span>
+                        <span class="pref-toggle__text">Enable Notifications</span>
+                    </label>
+                </div>
+
+                <div class="pref-options" id="notificationFrequency">
+                    <div class="pref-option">
+                        <label class="pref-option__label">
+                            <input type="radio" name="frequency" value="immediate" class="pref-option__input">
+                            <span class="pref-option__text">
+                                <span class="pref-option__title">Immediate</span>
+                                <span class="pref-option__desc">Every activity change</span>
+                            </span>
+                        </label>
+                    </div>
+
+                    <div class="pref-option">
+                        <label class="pref-option__label">
+                            <input type="radio" name="frequency" value="hourly" class="pref-option__input" checked>
+                            <span class="pref-option__text">
+                                <span class="pref-option__title">Hourly Summary</span>
+                                <span class="pref-option__desc">Once per hour</span>
+                            </span>
+                        </label>
+                    </div>
+
+                    <div class="pref-option">
+                        <label class="pref-option__label">
+                            <input type="radio" name="frequency" value="daily" class="pref-option__input">
+                            <span class="pref-option__text">
+                                <span class="pref-option__title">Daily Summary</span>
+                                <span class="pref-option__desc">End of day only</span>
+                            </span>
+                        </label>
+                    </div>
+                </div>
+            </section>
 
             <!-- Info Card -->
-            <div class="card info-card">
-                <p class="info-text">
-                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style="vertical-align: text-bottom;">
-                        <path d="M8 1.5C4.41 1.5 1.5 4.41 1.5 8C1.5 11.59 4.41 14.5 8 14.5C11.59 14.5 14.5 11.59 14.5 8C14.5 4.41 11.59 1.5 8 1.5ZM8.75 11.25H7.25V7.25H8.75V11.25ZM8.75 5.75H7.25V4.25H8.75V5.75Z" fill="currentColor"/>
-                    </svg>
-                    Time tracking runs in the background via Screenpipe. Set an issue to override automatic detection.
+            <div class="info-card">
+                <svg class="info-card__icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <line x1="12" y1="16" x2="12" y2="12"></line>
+                    <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                </svg>
+                <p class="info-card__text">
+                    Time tracking runs autonomously via Screenpipe AI.
+                    Set an issue to override automatic detection.
                 </p>
             </div>
         </main>
 
         <!-- Footer -->
         <footer class="app-footer">
-            <p>Daemon: <span id="daemonStatus" class="daemon-status">Checking...</span></p>
+            <div class="connection-status">
+                <div class="connection-status__indicator" id="connectionIndicator"></div>
+                <span class="connection-status__text" id="connectionText">Checking...</span>
+            </div>
+            <div class="sync-status">
+                <span class="sync-status__text" id="syncText">Last sync: Never</span>
+            </div>
         </footer>
     </div>
 
