@@ -10,13 +10,62 @@
     --danger: #E84545;
     --danger-hover: #D43939;
     --success: #2ECC71;
-    --bg: #F8F9FA;
+    --accent: #9B59B6;
+    --accent-hover: #8E44AD;
+}
+
+/* Light theme (default) */
+:root {
+    --bg: #F5F7FA;
     --card-bg: #FFFFFF;
     --text: #2C3E50;
     --text-light: #7F8C8D;
     --border: #E1E8ED;
-    --shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-    --shadow-hover: 0 4px 12px rgba(0, 0, 0, 0.15);
+    --shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+    --shadow-hover: 0 4px 16px rgba(0, 0, 0, 0.12);
+    --header-gradient: linear-gradient(135deg, #4169E1 0%, #5B7CE8 100%);
+}
+
+/* Dark theme (system preference) */
+@media (prefers-color-scheme: dark) {
+    :root {
+        --bg: #1a1d23;
+        --card-bg: #25282e;
+        --text: #E8EAED;
+        --text-light: #9AA0A6;
+        --border: #3c4043;
+        --shadow: 0 2px 12px rgba(0, 0, 0, 0.3);
+        --shadow-hover: 0 4px 16px rgba(0, 0, 0, 0.4);
+        --header-gradient: linear-gradient(135deg, #3557C5 0%, #4169E1 100%);
+    }
+
+    .status-badge.tracking {
+        background: #1e4620;
+        color: #81C784;
+    }
+
+    .status-badge.not-tracking {
+        background: #5f2120;
+        color: #EF9A9A;
+    }
+
+    .info-card {
+        background: linear-gradient(135deg, #1e3a4a 0%, #1a3340 100%);
+        border-left: 4px solid var(--primary);
+    }
+
+    .btn-refresh:hover {
+        background: rgba(255, 255, 255, 0.1);
+    }
+
+    .btn-secondary {
+        background: #3c4043;
+        color: var(--text);
+    }
+
+    .btn-secondary:hover {
+        background: #484c52;
+    }
 }
 
 body {
@@ -36,16 +85,18 @@ body {
 
 /* Header */
 .app-header {
-    background: linear-gradient(135deg, var(--primary) 0%, #5B7CE8 100%);
+    background: var(--header-gradient);
     color: white;
-    padding: 20px;
+    padding: 24px 20px;
     text-align: center;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 .app-header h1 {
-    font-size: 20px;
-    font-weight: 600;
-    margin-bottom: 4px;
+    font-size: 22px;
+    font-weight: 700;
+    margin-bottom: 6px;
+    letter-spacing: -0.5px;
 }
 
 .subtitle {
@@ -63,15 +114,17 @@ body {
 /* Cards */
 .card {
     background: var(--card-bg);
-    border-radius: 8px;
-    padding: 16px;
-    margin-bottom: 12px;
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 16px;
     box-shadow: var(--shadow);
-    transition: box-shadow 0.2s;
+    transition: all 0.2s ease;
+    border: 1px solid var(--border);
 }
 
 .card:hover {
     box-shadow: var(--shadow-hover);
+    transform: translateY(-2px);
 }
 
 .card-header {
@@ -244,6 +297,36 @@ body {
 
 .btn-refresh:active {
     transform: rotate(180deg);
+}
+
+.btn-accent {
+    background: var(--accent);
+    color: white;
+}
+
+.btn-accent:hover {
+    background: var(--accent-hover);
+}
+
+/* Export Section */
+.export-description {
+    font-size: 13px;
+    color: var(--text-light);
+    margin-bottom: 12px;
+}
+
+.export-buttons {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.export-buttons .btn {
+    flex: 1;
+    min-width: 160px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
 }
 
 /* Info Card */

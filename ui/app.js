@@ -11,6 +11,8 @@ const setIssueBtn = document.getElementById('setIssueBtn');
 const clearIssueBtn = document.getElementById('clearIssueBtn');
 const refreshBtn = document.getElementById('refreshBtn');
 const quickActionBtns = document.querySelectorAll('[data-issue]');
+const exportCsvBtn = document.getElementById('exportCsvBtn');
+const exportJsonBtn = document.getElementById('exportJsonBtn');
 
 // State
 let currentStatus = null;
@@ -27,6 +29,8 @@ function setupEventListeners() {
     setIssueBtn.addEventListener('click', handleSetIssue);
     clearIssueBtn.addEventListener('click', handleClearIssue);
     refreshBtn.addEventListener('click', handleRefresh);
+    exportCsvBtn.addEventListener('click', () => handleExport('csv'));
+    exportJsonBtn.addEventListener('click', () => handleExport('json'));
 
     // Quick action buttons
     quickActionBtns.forEach(btn => {
@@ -191,6 +195,35 @@ function showSuccess(message) {
     // Simple console log for now - can be enhanced with UI notifications
     console.log(message);
     // TODO: Add toast notification system
+}
+
+// Handle export
+async function handleExport(format) {
+    try {
+        showLoading(true);
+
+        const data = await invoke('export_data', { format });
+
+        // Create a blob and download it
+        const blob = new Blob([data], {
+            type: format === 'csv' ? 'text/csv' : 'application/json'
+        });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `activity-export-${new Date().toISOString().split('T')[0]}.${format}`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+
+        showSuccess(`Data exported as ${format.toUpperCase()}`);
+    } catch (error) {
+        console.error('Failed to export data:', error);
+        showError(`Failed to export data: ${error}`);
+    } finally {
+        showLoading(false);
+    }
 }
 
 // Auto-refresh every 30 seconds
