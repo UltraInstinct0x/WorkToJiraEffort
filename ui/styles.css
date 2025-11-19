@@ -1203,3 +1203,195 @@ h3 {
     transform: rotate(360deg);
   }
 }
+
+/* ========================================================================
+   Menubar Popup - Compact TimeScribe-style Window
+   ======================================================================== */
+
+.menubar-popup {
+  max-width: 350px;
+  margin: 0;
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  min-height: 100vh;
+  background-color: var(--color-bg);
+  color: var(--color-text);
+}
+
+/* Menubar Header */
+.menubar-header {
+  padding-bottom: var(--space-3);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.menubar-title {
+  font-size: var(--text-lg);
+  font-weight: var(--font-bold);
+  background: linear-gradient(135deg, var(--color-terracotta), var(--color-sage));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin: 0;
+}
+
+/* Menubar Status Display */
+.menubar-status {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  background-color: var(--color-surface);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  box-shadow: var(--shadow-sm);
+}
+
+.status-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--space-2) 0;
+}
+
+.status-label-small {
+  font-size: var(--text-xs);
+  color: var(--color-text-secondary);
+  font-weight: var(--font-medium);
+  min-width: 50px;
+}
+
+.status-value-small {
+  font-size: var(--text-sm);
+  font-weight: var(--font-semibold);
+  color: var(--color-text);
+}
+
+.status-value-small.status-value--time {
+  font-family: var(--font-mono);
+  color: var(--color-terracotta);
+}
+
+/* Small Status Badge */
+.status-badge--small {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-full);
+  font-size: var(--text-xs);
+  font-weight: var(--font-semibold);
+  background-color: var(--color-surface-secondary);
+  color: var(--color-text-secondary);
+  border: 1px solid var(--color-border);
+}
+
+.status-badge--small.status-badge--active {
+  background-color: var(--color-sage);
+  color: white;
+  border-color: var(--color-sage);
+}
+
+.icon-small {
+  flex-shrink: 0;
+  stroke-width: 2;
+}
+
+/* Menubar Issue Input */
+.menubar-issue-input {
+  display: flex;
+  gap: var(--space-2);
+  margin: var(--space-2) 0;
+}
+
+.menubar-issue-input .input {
+  flex: 1;
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--text-sm);
+}
+
+.menubar-issue-input .btn {
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--text-sm);
+}
+
+/* Small Input */
+.input--small {
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--text-sm);
+  border-radius: var(--radius-sm);
+}
+
+/* Extra Small Button */
+.btn--xs {
+  padding: var(--space-1) var(--space-2);
+  font-size: var(--text-xs);
+  gap: var(--space-1);
+}
+
+/* Block Button */
+.btn--block {
+  width: 100%;
+  justify-content: center;
+}
+
+/* Menubar Actions */
+.menubar-actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: var(--space-2) 0;
+}
+
+.menubar-actions .btn {
+  width: 100%;
+}
+
+/* Menubar Footer */
+.menubar-footer {
+  margin-top: auto;
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--color-border);
+}
+
+.connection-status--compact {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+/* Toast Notifications */
+.toast {
+  position: fixed;
+  bottom: 16px;
+  left: 50%;
+  transform: translateX(-50%) translateY(100px);
+  padding: var(--space-3) var(--space-4);
+  background-color: var(--color-surface);
+  color: var(--color-text);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  box-shadow: var(--shadow-lg);
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
+  z-index: 9999;
+  transition: transform var(--duration-normal) var(--ease-out);
+}
+
+.toast--show {
+  transform: translateX(-50%) translateY(0);
+}
+
+.toast--success {
+  border-left: 4px solid var(--color-success);
+}
+
+.toast--error {
+  border-left: 4px solid var(--color-error);
+  color: var(--color-error);
+}
+
+.toast--info {
+  border-left: 4px solid var(--color-info);
+}
