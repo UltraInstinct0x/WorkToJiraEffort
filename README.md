@@ -173,9 +173,60 @@ curl -X POST http://127.0.0.1:8787/issue \
   -d '{"issue_key": null}'
 ```
 
-### Menubar/System Tray Application
+### Tauri Desktop Application (Recommended)
 
-For a user-friendly GUI experience, use the menubar/system tray application:
+For the best user experience, use the modern Tauri desktop application with a beautiful TimeScribe-inspired UI:
+
+```bash
+# Build the Tauri app
+cargo build --release --bin work-to-jira-effort-ui --features tauri-ui
+
+# Run the app
+./target/release/work-to-jira-effort-ui
+```
+
+#### UI Features
+
+The Tauri app provides a dual-window architecture inspired by TimeScribe's menubar design:
+
+**🎯 Menubar Popup (Left-Click Tray Icon)**
+- **Compact Interface**: 350x450px quick-access popup positioned near tray icon
+- **Status at a Glance**: Current tracking status, active issue, and today's time
+- **Quick Actions**: Set/clear issue override with single input field
+- **Dashboard Access**: "Open Dashboard" button for detailed view
+- **Auto-Hide**: Closes when clicking outside or switching focus
+
+**📊 Full Dashboard (Right-Click → Open Dashboard)**
+- **Status Overview**: Real-time tracking status and current issue
+- **Recent Issues**: Quick-access list of recently tracked issues with time totals
+- **Time Summary**: Daily breakdown by issue with visual progress bars
+- **Settings & Preferences**: Issue override, notification controls, theme toggle
+- **Connection Health**: Live daemon status with pulsing indicator
+
+**🎨 Modern Design**
+- TimeScribe-inspired warm terracotta & sage green palette
+- Fraunces display font for elegant typography
+- Smooth animations and transitions
+- Dark/light mode support with system preference detection
+
+**🔄 Real-time Updates**
+- Auto-refresh every 30 seconds
+- Live connection status monitoring
+- Last sync timestamp display
+
+**Platform requirements:**
+- **macOS**: 10.13+, no additional dependencies
+- **Windows**: Windows 10+, no additional dependencies
+- **Linux**: WebKit2GTK 4.0
+
+For UI design specifications and component documentation, see:
+- [UI Design System](docs/UI_DESIGN.md)
+- [Component Documentation](docs/UI_COMPONENTS.md)
+- [Development Guide](docs/DEVELOPMENT.md)
+
+### System Tray Application (Alternative)
+
+For a minimal system tray experience:
 
 ```bash
 # Build with tray support (requires GUI libraries)

@@ -8,17 +8,19 @@ license = "MIT"
 
 [package.metadata.bundle]
 name = "WorkToJiraEffort"
-identifier = "com.worktojiraeffort.tray"
-icon = []
+identifier = "com.worktojiraeffort.app"
+icon = ["icons/32x32.png", "icons/128x128.png", "icons/icon.icns", "icons/icon.ico"]
 version = "0.1.0"
-resources = []
 copyright = "Copyright (c) 2024 WorkToJiraEffort Contributors"
 category = "Productivity"
 short_description = "Automatic work time tracking for Jira"
 long_description = "Automatically track work time via Screenpipe and log to Jira & Salesforce"
 osx_minimum_system_version = "10.13"
-osx_url_schemes = []
-osx_info_plist_path = "resources/macos/Info.plist"
+
+[package.metadata.bundle.bin.work-to-jira-effort-ui]
+name = "WorkToJiraEffort"
+identifier = "com.worktojiraeffort.app"
+
 
 [dependencies]
 # HTTP client for API calls

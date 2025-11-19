@@ -5,33 +5,19 @@
   "identifier": "com.worktojiraeffort.app",
   "build": {
     "frontendDist": "ui",
-    "devUrl": "http://localhost:3000",
     "beforeDevCommand": "",
     "beforeBuildCommand": ""
   },
   "app": {
-    "windows": [
-      {
-        "title": "WorkToJiraEffort",
-        "label": "main",
-        "width": 400,
-        "height": 600,
-        "resizable": false,
-        "fullscreen": false,
-        "decorations": true,
-        "alwaysOnTop": false,
-        "visible": false,
-        "center": true,
-        "skipTaskbar": false
-      }
-    ],
+    "withGlobalTauri": true,
+    "windows": [],
     "security": {
       "csp": null
     },
     "trayIcon": {
       "id": "main",
       "iconPath": "icons/icon.png",
-      "iconAsTemplate": true,
+      "iconAsTemplate": false,
       "menuOnLeftClick": false,
       "tooltip": "WorkToJiraEffort - Time Tracker"
     }

@@ -6,6 +6,18 @@
 # Default: http://localhost:3030
 url = "http://localhost:3030"
 
+[llm]
+# Enable LLM analysis
+enabled = false
+# LLM API endpoint
+endpoint = "https://api.openai.com/v1/chat/completions"
+# LLM API key
+api_key = "your-api-key"
+# Model to use
+model = "gpt-4"
+# Custom prompt (optional)
+# prompt = "Analyze this work session..."
+
 [jira]
 # Your Jira instance URL (e.g., https://your-company.atlassian.net)
 url = "https://your-domain.atlassian.net"
@@ -18,6 +30,9 @@ api_token = "your-api-token"
 
 # Enable/disable Jira integration
 enabled = true
+
+# Detect assigned issues in window titles (e.g. "PROJ-123: Task")
+detect_assigned_issues_in_titles = true
 
 [salesforce]
 # Your Salesforce instance URL
@@ -50,3 +65,7 @@ poll_interval_secs = 300
 # Activities shorter than this will be ignored
 # Default: 60 (1 minute)
 min_activity_duration_secs = 60
+
+# How often to run LLM batch analysis (in seconds)
+# Default: 10800 (3 hours)
+llm_batch_interval_secs = 10800

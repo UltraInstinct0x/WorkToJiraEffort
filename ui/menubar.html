@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WorkToJiraEffort</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="menubar-popup" data-theme="light">
+        <!-- Header -->
+        <div class="menubar-header">
+            <h1 class="menubar-title">WorkToJiraEffort</h1>
+        </div>
+
+        <!-- Current Status -->
+        <div class="menubar-status">
+            <div class="status-row">
+                <span class="status-label-small">Tracking</span>
+                <span class="status-badge status-badge--small" id="trackingStatus">
+                    <svg class="icon-small" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10"></circle>
+                    </svg>
+                    <span id="trackingStatusText">Inactive</span>
+                </span>
+            </div>
+
+            <div class="status-row">
+                <span class="status-label-small">Issue</span>
+                <span class="status-value-small" id="currentIssue">Auto-detect</span>
+            </div>
+
+            <div class="status-row">
+                <span class="status-label-small">Today</span>
+                <span class="status-value-small status-value--time" id="totalTime">0h 0m</span>
+            </div>
+        </div>
+
+        <!-- Quick Issue Override -->
+        <div class="menubar-issue-input">
+            <input
+                type="text"
+                id="issueInput"
+                class="input input--small"
+                placeholder="Override issue"
+                maxlength="50"
+            />
+            <button class="btn btn--primary btn--small" id="setIssueBtn">Set</button>
+        </div>
+
+        <button class="btn btn--ghost btn--xs" id="clearIssueBtn" style="width: 100%; margin-top: 4px;">
+            <svg class="icon-small" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+            Clear Override
+        </button>
+
+        <!-- Actions -->
+        <div class="menubar-actions">
+            <button class="btn btn--secondary btn--block" id="openDashboardBtn">
+                <svg class="icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="3" y="3" width="7" height="7"></rect>
+                    <rect x="14" y="3" width="7" height="7"></rect>
+                    <rect x="14" y="14" width="7" height="7"></rect>
+                    <rect x="3" y="14" width="7" height="7"></rect>
+                </svg>
+                Open Dashboard
+            </button>
+        </div>
+
+        <!-- Footer -->
+        <div class="menubar-footer">
+            <div class="connection-status connection-status--compact">
+                <div class="connection-status__indicator" id="connectionIndicator"></div>
+                <span class="connection-status__text" id="connectionText">Checking...</span>
+            </div>
+        </div>
+    </div>
+
+    <script src="menubar.js"></script>
+</body>
+</html>

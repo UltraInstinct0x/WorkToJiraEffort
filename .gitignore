@@ -19,3 +19,5 @@ config.toml
 # Tauri generated files
 gen/
 
+# Cloned reference repos
+TimeScribe/
