@@ -5,11 +5,11 @@
   "identifier": "com.worktojiraeffort.app",
   "build": {
     "frontendDist": "ui",
-    "devUrl": "http://localhost:3000",
     "beforeDevCommand": "",
     "beforeBuildCommand": ""
   },
   "app": {
+    "withGlobalTauri": true,
     "windows": [
       {
         "title": "WorkToJiraEffort",
@@ -31,7 +31,7 @@
     "trayIcon": {
       "id": "main",
       "iconPath": "icons/icon.png",
-      "iconAsTemplate": true,
+      "iconAsTemplate": false,
       "menuOnLeftClick": false,
       "tooltip": "WorkToJiraEffort - Time Tracker"
     }
