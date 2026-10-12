@@ -9,7 +9,7 @@ Get up and running with WorkToJiraEffort in 5 minutes!
    - Click "Create API token"
    - Copy the token (you'll need it later)
 
-**Note**: Screenpipe is now embedded! The application will automatically install and manage Screenpipe for you - no separate installation needed!
+**Note**: The application manages Screenpipe for you and installs it on first use if it is missing, which requires internet access. Screenpipe is not bundled in the build.
 
 ## Installation
 

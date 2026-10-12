@@ -5,8 +5,8 @@ Automatically track your work time via Screenpipe and log effort to Jira & Sales
 ## Overview
 
 WorkToJiraEffort is a cross-platform (Linux, Windows, macOS) application written in Rust that:
-- **Automatically manages Screenpipe** - No separate installation needed!
-- Monitors your work activities using the embedded [Screenpipe](https://github.com/mediar-ai/screenpipe)
+- **Automatically manages Screenpipe** - locates the [Screenpipe](https://github.com/mediar-ai/screenpipe) binary and runs it as a managed subprocess, installing it on first use if it is missing
+- Monitors your work activities using Screenpipe
 - Automatically detects Jira issue keys from your active applications
 - Logs work time to Jira issues
 - Optionally logs time entries to Salesforce
@@ -14,13 +14,13 @@ WorkToJiraEffort is a cross-platform (Linux, Windows, macOS) application written
 
 ## Features
 
-- 🔄 **Automatic Time Tracking**: Monitors your active windows and applications via embedded Screenpipe
+- 🔄 **Automatic Time Tracking**: Monitors your active windows and applications via Screenpipe
 - 🎯 **Smart Jira Detection**: Automatically finds Jira issue keys (e.g., PROJ-123) in window titles
 - 📊 **Dual Platform Support**: Logs time to both Jira and Salesforce
 - ⚙️ **Configurable**: Customizable polling intervals and minimum activity duration
 - 🔒 **Secure**: API credentials stored in local configuration file
 - 🖥️ **Cross-Platform**: Works on Linux, Windows, and macOS
-- 🚀 **Zero Setup**: Screenpipe is automatically installed and managed - no external dependencies!
+- 🚀 **Managed Screenpipe**: the app installs Screenpipe on first run if it is missing, which requires internet access
 - 🎛️ **Menubar/System Tray App**: Optional GUI for easy control and issue override management
 - 🔌 **Daemon Mode**: Run as a background service with HTTP API for external control
 
@@ -37,7 +37,7 @@ WorkToJiraEffort is a cross-platform (Linux, Windows, macOS) application written
    - Security token
    - Connected app credentials (client ID and secret)
 
-**Note**: Screenpipe is now embedded in the application and will be automatically installed and managed. You no longer need to install or run it separately!
+**Note**: The app manages a Screenpipe instance for you and does not require you to install it in advance. If no `screenpipe` binary is found, it downloads and runs the upstream installer on first use (Unix: `curl ... | sh`, Windows: `iwr ... | iex`), so the first run needs internet access. Screenpipe is not bundled in the build.
 
 ## Installation
 
@@ -114,6 +114,8 @@ This verifies:
 - Jira API credentials are correct
 - Salesforce API credentials are correct (if enabled)
 
+The Screenpipe check starts a temporary Screenpipe process and then stops it, rather than only probing an already-running instance.
+
 ### Start Tracking
 
 ```bash
@@ -121,7 +123,7 @@ work-to-jira-effort start
 ```
 
 The application will:
-1. Start the embedded Screenpipe server automatically
+1. Start the Screenpipe server automatically (installing it first if needed)
 2. Connect to Screenpipe
 3. Poll for recent activities at the configured interval
 4. Consolidate activities by application/window
@@ -280,7 +282,7 @@ The application is structured into several modules:
 
 - **config**: Configuration management and persistence
 - **screenpipe**: Screenpipe API client for activity retrieval
-- **screenpipe_manager**: Embedded Screenpipe installation and lifecycle management
+- **screenpipe_manager**: Screenpipe binary discovery, installation and lifecycle management
 - **jira**: Jira API client for worklog creation
 - **salesforce**: Salesforce API client for time entry creation
 - **tracker**: Core tracking logic and activity consolidation with issue override support
@@ -356,6 +358,30 @@ cargo fmt
 ```bash
 cargo clippy
 ```
+
+## Implemented in repository
+
+- A Rust CLI with `init`, `start`, `check` and `daemon` commands.
+- Jira issue key detection from window titles using the `[A-Z]+-\d+` pattern, then Jira worklog creation.
+- Optional Salesforce time entry creation via the `TimeEntry__c` object.
+- A daemon mode with an HTTP control API on `http://127.0.0.1:8787` (`GET /status`, `POST /issue`).
+- A Tauri desktop UI building on the `tauri-ui` feature and a tray app on the `tray` feature.
+- Screenpipe lifecycle management: binary discovery on `PATH` and common locations, and download plus installation of the upstream installer when it is missing.
+
+## Limitations and unverified behavior
+
+- **Screenpipe is not embedded.** The release artifacts contain only the Rust binary; no Screenpipe component is bundled (`resources/` holds a single macOS `Info.plist`). On first run the app downloads and executes the upstream Screenpipe installer, which requires internet access plus `curl`/`sh` on Unix or PowerShell on Windows. `EMBEDDED_SCREENPIPE.md` lists "Bundled Screenpipe binary in release" and "Offline installation support" as future enhancements, so "embedded" here means automatic lifecycle management, not packaging.
+- **`check` runs a temporary Screenpipe.** The command starts a Screenpipe subprocess and stops it, rather than only probing one that is already running.
+- **Conflicting guidance.** `install.sh` prints "Ensure Screenpipe is running (http://localhost:3030)" on success, which conflicts with the zero-setup wording elsewhere.
+- **Credentials are stored in plain text** in the config file. See Security Considerations.
+- **Not verified by running.** The project was not built and no tests were executed as part of documenting this, so runtime behavior is not confirmed here.
+
+## Roadmap (proposals, not commitments)
+
+These are proposals, not commitments or scheduled work:
+
+- Bundle a Screenpipe binary in release artifacts and support offline installation.
+- Add integration tests.
 
 ## Contributing
 
